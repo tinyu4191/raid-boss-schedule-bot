@@ -7,7 +7,7 @@ import { getWeekRangeLabel, formatTaipeiDateHeader, formatTaipeiTime, isPast } f
  * @param {string} args.emoji
  * @param {string} args.color - hex color
  * @param {string} args.weekStartKey - YYYY-MM-DD (Tuesday)
- * @param {Array}  args.entries - [{ date, isFull, missingCount, missingClasses, threadId }]
+ * @param {Array}  args.entries - [{ date, isFull, missingText, teamName, threadId }]
  * @param {Date}   args.now
  * @returns {{ empty: true, content: string } | { empty: false, embed: EmbedBuilder }}
  */
@@ -30,8 +30,7 @@ export function buildScheduleEmbed({ bossName, emoji, color, weekStartKey, entri
     lines.push(`**${dayLabel}**`);
     for (const e of dayEntries) {
       const statusEmoji = e.isFull ? '🈵' : '🈸';
-      const classesPart = e.missingClasses.length ? ` (${e.missingClasses.join(', ')})` : '';
-      const missingPart = `缺 ${e.missingCount}${classesPart}`;
+      const missingPart = e.missingText;
       const statusText = e.isFull
         ? e.teamName
           ? `${e.teamName}（已滿）`

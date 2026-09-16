@@ -1,42 +1,34 @@
 // Parses discussion-thread titles like:
-//   08/20(三) 20:00｜缺2(劍士,弓箭手)     -- 舊格式，無團名
-//   08/20(三) 20:00｜已滿                -- 舊格式，無團名
-//   08/20(三) 20:00｜無敵樹王團(-2打手)   -- 新格式，有團名 + 缺人
-//   08/20(三) 20:00｜屠龍小隊             -- 新格式，有團名，沒有「缺」或「-」就代表已滿
+//   08/20(三) 20:00｜缺2(劍士,弓箭手)
+//   08/20(三) 20:00｜已滿
+//   08/20(三) 20:00｜無敵樹王團(-2打手)
+//   08/20(三) 20:00｜屠龍小隊
+//   09/19(六) 14:00｜叭叭後面有樹王拓荒-兩法 -火
 //
 // Weekday text inside the parens after the date is not validated — it's for
 // humans only.
 //
-// Rule for the free-text status (anything after ｜ that isn't the literal
-// "已滿"): if it contains 缺 or -, it's read as "<團名><缺N(職業)>" (團名
-// optional). Otherwise the whole text is treated as a full team's name.
+// Status-text rule: the literal "已滿" means full, no name. Otherwise: if
+// the text contains 缺 or -, everything from the FIRST such marker onward
+// is kept and shown VERBATIM as the "missing" info — however the captain
+// phrased it (Arabic numerals, Chinese numerals like 兩, multiple "-X -Y"
+// segments, whatever) — and everything before that marker is the team
+// name. There is deliberately no attempt to parse out a structured count
+// or class list anymore: real usage varies too much for that to hold up,
+// and passing the raw text through is both simpler and more robust. If the
+// text contains NEITHER 缺 nor -, the whole thing is a team name and the
+// team is read as full.
 const TITLE_PREFIX_RE = /^(\d{1,2})\/(\d{1,2})\([^)]*\)\s*(\d{1,2}):(\d{2})\s*[｜|]\s*(.+)$/;
-
-// Old format, checked first and as its own exact/anchored pattern: "缺N(職
-// 業...)" with NO team name, where the parens wrap only the class list
-// (they sit right after the digit). This must be tried before MISSING_RE
-// below, or MISSING_RE would misparse the parens as part of a team name
-// section instead.
-const OLD_MISSING_RE = /^缺\s*(\d+)\s*\(([^)]*)\)$/;
-
-// New format: optional team name + a missing-marker (缺 or -) + digit +
-// optional class list, with the marker's parens (if any) wrapping the
-// marker itself rather than just the classes:
-//   "無敵樹王團(-2打手)"  -> name="無敵樹王團", count=2, classes="打手"
-//   "無敵樹王團-2打手"    -> same, without parens
-// Classes deliberately excludes '(' as well as ')', so this can't
-// accidentally swallow a stray paren from the old-format structure above.
-const MISSING_RE = /^(.*?)\(?[-缺]\s*(\d+)\s*([^()]*?)\)?\s*$/;
+const MARKER_RE = /[-缺]/;
 
 /**
  * @param {string} title - raw thread title
  * @param {Date} referenceDate - "now", used to infer the year
  * @returns {null | {
- *   date: Date,             // instant corresponding to the Asia/Taipei wall-clock time in the title
+ *   date: Date,              // instant corresponding to the Asia/Taipei wall-clock time in the title
  *   isFull: boolean,
- *   missingCount: number,
- *   missingClasses: string[], // free text, exactly as the captain typed it
- *   teamName: string | null   // free text team name, if the captain gave one
+ *   missingText: string,     // raw text from the first 缺/- marker onward, '' if full
+ *   teamName: string | null  // free text team name, if the captain gave one
  * }}
  */
 export function parseThreadTitle(title, referenceDate = new Date()) {
@@ -68,35 +60,31 @@ export function parseThreadTitle(title, referenceDate = new Date()) {
   const statusText = statusRaw.trim();
 
   let isFull;
-  let missingCount = 0;
-  let missingClasses = [];
+  let missingText = '';
   let teamName = null;
 
   if (statusText === '已滿') {
     isFull = true;
   } else {
-    const oldMatch = OLD_MISSING_RE.exec(statusText);
-    if (oldMatch) {
-      isFull = false;
-      missingCount = Number(oldMatch[1]);
-      missingClasses = oldMatch[2].split(',').map((s) => s.trim()).filter(Boolean);
-      // teamName stays null — old format never has one.
-    } else if (!statusText.includes('缺') && !statusText.includes('-')) {
-      // No missing-marker at all — the whole thing is a team name, and a
-      // named team with no 缺/- is read as full.
+    const markerMatch = MARKER_RE.exec(statusText);
+    if (!markerMatch) {
+      // No 缺/- anywhere — the whole thing is a team name, read as full.
       isFull = true;
       teamName = statusText;
     } else {
-      const missingMatch = MISSING_RE.exec(statusText);
-      if (!missingMatch) return null; // has 缺/- but doesn't parse — ignore silently
-
-      const [, namePart, countRaw, classesRaw] = missingMatch;
       isFull = false;
-      missingCount = Number(countRaw);
-      missingClasses = classesRaw.split(',').map((s) => s.trim()).filter(Boolean);
-      teamName = namePart.trim() || null;
+      let idx = markerMatch.index;
+      // If the marker is immediately preceded by '(', that paren belongs
+      // to the missing-info chunk (it's wrapping "-2打手" as a whole), not
+      // to the team name — e.g. "無敵樹王團(-2打手)" should split into
+      // name="無敵樹王團" / missing="(-2打手)", not leave a dangling "(".
+      if (idx > 0 && statusText[idx - 1] === '(') {
+        idx -= 1;
+      }
+      teamName = statusText.slice(0, idx).trim() || null;
+      missingText = statusText.slice(idx).trim();
     }
   }
 
-  return { date, isFull, missingCount, missingClasses, teamName };
+  return { date, isFull, missingText, teamName };
 }
