@@ -46,3 +46,18 @@ export function upsertWeeklySummaryMessage({ guildId, bossName, weekStartDate, c
       channel_id = excluded.channel_id
   `).run({ guildId, bossName, weekStartDate, channelId, messageId });
 }
+
+// ---------- reminded_threads ----------
+
+export function hasReminderBeenSent(threadId) {
+  const row = db.prepare(`SELECT 1 FROM reminded_threads WHERE thread_id = ?`).get(threadId);
+  return !!row;
+}
+
+export function markReminderSent(guildId, bossName, threadId) {
+  db.prepare(`
+    INSERT INTO reminded_threads (guild_id, boss_name, thread_id, reminded_at)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(thread_id) DO NOTHING
+  `).run(guildId, bossName, threadId, new Date().toISOString());
+}
