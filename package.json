@@ -1,0 +1,22 @@
+{
+  "name": "raid-boss-schedule-bot",
+  "version": "0.1.0",
+  "description": "Discord bot: parses raid-boss signup forum threads and keeps a weekly schedule embed in sync.",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "deploy-commands": "node src/deploy-commands.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5"
+  },
+  "allowScripts": {
+    "better-sqlite3@11.10.0": true
+  }
+}

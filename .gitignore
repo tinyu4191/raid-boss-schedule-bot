@@ -1,0 +1,27 @@
+# 相依套件
+node_modules/
+
+# 環境變數（含機器人 Token，絕對不能上傳）
+.env
+
+# SQLite 資料庫檔案（含實際報名/行程資料，不該進版控）
+data.sqlite
+data.sqlite-journal
+data.sqlite-wal
+data.sqlite-shm
+
+# npm 相關
+package-lock.json.bak
+npm-debug.log*
+
+# 編輯器/系統雜項
+.vscode/
+.DS_Store
+*.log
+
+# node-gyp 編譯產物（better-sqlite3 原生模組）
+build/
+
+# tar檔
+*.tar.gz
+*.tar
