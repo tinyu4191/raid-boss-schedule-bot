@@ -2,10 +2,21 @@ import 'dotenv/config';
 import { Client, GatewayIntentBits, Partials } from 'discord.js';
 import { getBossConfigs, getBossConfigBySignupChannel } from './config/bosses.js';
 import { syncBossSchedule } from './lib/scheduleSync.js';
+import { scanAndSendReminders } from './lib/reminderScan.js';
 import { registerCommandHandlers } from './commands/index.js';
 
+const REMINDER_SCAN_INTERVAL_MS = 60 * 1000; // check every minute
+
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    // Needed to read a signup thread's starter-message content (roster
+    // mentions + "CH88"-style channel text) for the pre-raid reminder.
+    // Requires the Message Content privileged intent to also be turned on
+    // in the Developer Portal — see README.
+    GatewayIntentBits.MessageContent,
+  ],
   partials: [Partials.Channel],
 });
 
@@ -26,6 +37,14 @@ client.on('threadCreate', handleThreadEvent);
 client.on('threadUpdate', (_oldThread, newThread) => handleThreadEvent(newThread));
 client.on('threadDelete', handleThreadEvent);
 
+async function runReminderScan() {
+  for (const cfg of getBossConfigs()) {
+    await scanAndSendReminders(client, cfg).catch((err) =>
+      console.error(`[reminderScan] ${cfg.boss_name} failed:`, err)
+    );
+  }
+}
+
 client.once('clientReady', async () => {
   console.log(`Logged in as ${client.user.tag}`);
 
@@ -44,6 +63,10 @@ client.once('clientReady', async () => {
       console.error(`[startup sync] ${cfg.boss_name} failed:`, err)
     );
   }
+
+  // Kick off the pre-raid reminder scan loop.
+  await runReminderScan();
+  setInterval(runReminderScan, REMINDER_SCAN_INTERVAL_MS);
 });
 
 registerCommandHandlers(client);
