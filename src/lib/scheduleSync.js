@@ -2,6 +2,7 @@ import { ChannelType } from 'discord.js';
 import { getWeekStartKey } from './weekUtils.js';
 import { parseThreadTitle } from './titleParser.js';
 import { buildScheduleEmbed } from './embedBuilder.js';
+import { resolveBossTag } from './forumTags.js';
 import {
   getWeeklySummaryMessage,
   upsertWeeklySummaryMessage,
@@ -17,7 +18,8 @@ import {
  * one week's summary to another.
  */
 export async function syncBossSchedule(client, bossConfig) {
-  const { guild_id, boss_name, signup_channel_id, schedule_channel_id, emoji, color } = bossConfig;
+  const { guild_id, boss_name, signup_channel_id, schedule_channel_id, emoji, color, boss_tags } = bossConfig;
+  const isShared = Array.isArray(boss_tags);
 
   const forumChannel = await client.channels.fetch(signup_channel_id).catch(() => null);
   if (!forumChannel || forumChannel.type !== ChannelType.GuildForum) {
@@ -41,7 +43,9 @@ export async function syncBossSchedule(client, bossConfig) {
     if (!parsed) continue; // title doesn't match the format — ignore silently
     const weekKey = getWeekStartKey(parsed.date);
     if (!weekGroups.has(weekKey)) weekGroups.set(weekKey, []);
-    weekGroups.get(weekKey).push({ ...parsed, threadId: thread.id });
+
+    const bossLabel = isShared ? resolveBossTag(thread, forumChannel, boss_tags) : null;
+    weekGroups.get(weekKey).push({ ...parsed, threadId: thread.id, bossLabel });
   }
 
   const scheduleChannel = await client.channels.fetch(schedule_channel_id).catch(() => null);
@@ -84,6 +88,7 @@ export async function syncBossSchedule(client, bossConfig) {
       weekStartKey: weekKey,
       entries,
       now,
+      isShared,
     });
     const payload = empty ? { content, embeds: [] } : { content: null, embeds: [embed] };
 
