@@ -88,6 +88,7 @@ import 'dotenv/config';
  * getBossConfigs() is actually called, and the result is cached.
  */
 let cachedConfigs = null;
+let cachedStyles = null;
 
 // Finds every N for which `${prefix}_${N}_${suffix}` exists as an env var
 // key, sorted ascending. Deliberately gap-tolerant — see the numbering
@@ -115,11 +116,32 @@ function loadBossStyles() {
   return styles;
 }
 
+function getStyles() {
+  if (!cachedStyles) cachedStyles = loadBossStyles();
+  return cachedStyles;
+}
+
+/**
+ * Looks up a boss's STYLE_<n>_* entry by name (see the SHARED STYLES note
+ * above). Used both for normal single-boss configs (already wired in
+ * getBossConfigs below) and, as a fallback, by forumTags.js: in shared/
+ * tag-based mode, a Forum tag with no emoji configured on the Discord side
+ * can still show one by matching its name against this same registry —
+ * one place to define what a boss looks like, reused everywhere its name
+ * shows up.
+ *
+ * @param {string} name
+ * @returns {{ emoji: string | null, color: string | null } | null}
+ */
+export function getBossStyle(name) {
+  return getStyles().get(name) ?? null;
+}
+
 export function getBossConfigs() {
   if (cachedConfigs) return cachedConfigs;
 
   const defaultGuildId = process.env.GUILD_ID; // fallback only now, not required by itself
-  const styles = loadBossStyles();
+  const styles = getStyles();
 
   const configs = [];
   for (const i of findNumberedKeys('BOSS', 'NAME')) {

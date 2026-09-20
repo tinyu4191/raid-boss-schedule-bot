@@ -1,6 +1,7 @@
 // Resolves which boss a thread belongs to when a signup forum is shared
 // across multiple bosses via Discord's own Forum tag feature, instead of
 // one forum per boss. See config/bosses.js for the BOSS_<n>_TAGS format.
+import { getBossStyle } from '../config/bosses.js';
 
 const UNTAGGED_LABEL = { name: '未標籤突襲', emoji: '❓' };
 
@@ -21,7 +22,11 @@ export function resolveBossTag(thread, forumChannel, bossTagNames) {
     if (!tag) continue;
     if (!bossTagNames.includes(tag.name)) continue; // a time/session tag, not a boss tag — ignore
 
-    const emoji = tag.emoji ? (tag.emoji.id ? `<:${tag.emoji.name}:${tag.emoji.id}>` : tag.emoji.name) : null;
+    // Prefer the emoji configured on the Forum tag itself in Discord; if
+    // the tag has none set, fall back to STYLE_<n>_EMOJI for a boss of
+    // this name (see config/bosses.js) rather than showing nothing.
+    const tagEmoji = tag.emoji ? (tag.emoji.id ? `<:${tag.emoji.name}:${tag.emoji.id}>` : tag.emoji.name) : null;
+    const emoji = tagEmoji || getBossStyle(tag.name)?.emoji || null;
     return { name: tag.name, emoji };
   }
 
