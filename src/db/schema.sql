@@ -20,3 +20,11 @@ CREATE TABLE IF NOT EXISTS reminded_threads (
   reminded_at TEXT NOT NULL, -- ISO timestamp, for debugging only
   PRIMARY KEY (thread_id)
 );
+
+-- Tracks which threads have already gotten a "please fix your title
+-- manually" notice (see titleNormalizer.js), so a captain who ignores it
+-- isn't @-mentioned again on every subsequent edit attempt.
+CREATE TABLE IF NOT EXISTS title_fix_notices (
+  thread_id   TEXT PRIMARY KEY,
+  notified_at TEXT NOT NULL
+);

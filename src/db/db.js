@@ -61,3 +61,18 @@ export function markReminderSent(guildId, bossName, threadId) {
     ON CONFLICT(thread_id) DO NOTHING
   `).run(guildId, bossName, threadId, new Date().toISOString());
 }
+
+// ---------- title_fix_notices ----------
+
+export function hasTitleFixNoticeBeenSent(threadId) {
+  const row = db.prepare(`SELECT 1 FROM title_fix_notices WHERE thread_id = ?`).get(threadId);
+  return !!row;
+}
+
+export function markTitleFixNoticeSent(threadId) {
+  db.prepare(`
+    INSERT INTO title_fix_notices (thread_id, notified_at)
+    VALUES (?, ?)
+    ON CONFLICT(thread_id) DO NOTHING
+  `).run(threadId, new Date().toISOString());
+}
