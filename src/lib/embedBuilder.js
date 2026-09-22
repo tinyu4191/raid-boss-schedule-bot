@@ -24,7 +24,7 @@ export function buildScheduleEmbed({
   emoji,
   color,
   fullEmoji = '🈵',
-  missingEmoji = '🈸',
+  missingEmoji = '🆓',
   weekStartKey,
   entries,
   now = new Date(),
