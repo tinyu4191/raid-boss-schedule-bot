@@ -49,7 +49,7 @@ Examples:
 
 - One Embed per boss per week, grouped by day, sorted by parsed date/time
   (not thread-creation time).
-- 🈵 = full, 🈸 = still needs people.
+- 🈵 = full, 🟩 = still needs people.
 - Threads whose date/time has already passed are shown with strikethrough
   and `*(已結束)*`, not removed — they naturally drop off once that week's
   message is replaced by the next week's.

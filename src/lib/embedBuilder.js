@@ -36,7 +36,7 @@ export function buildScheduleEmbed({ bossName, emoji, color, weekStartKey, entri
   for (const [dayLabel, dayEntries] of byDay) {
     lines.push(`**${dayLabel}**`);
     for (const e of dayEntries) {
-      const statusEmoji = e.isFull ? '🈵' : '🈸';
+      const statusEmoji = e.isFull ? '🈵' : '🟩';
 
       let afterPipe;
       if (isShared) {
