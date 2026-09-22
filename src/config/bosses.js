@@ -92,7 +92,7 @@ import 'dotenv/config';
  * embeds. Optional — omit it and reminders keep going to the schedule
  * channel exactly as before.
  *
- * CUSTOM FULL/MISSING EMOJI: the 🈵 (full) / 🈸 (missing people) status
+ * CUSTOM FULL/MISSING EMOJI: the 🈵 (full) / 🆓 (missing people) status
  * emoji shown on every schedule line default to those two, but some
  * servers want their own. BOSS_<n>_FULL_EMOJI / BOSS_<n>_MISSING_EMOJI
  * override them, and — same pattern as EMOJI/COLOR — a matching
@@ -104,7 +104,7 @@ import 'dotenv/config';
  *
  * Resolution order, independently for each of the two: its own
  * BOSS_<n>_*_EMOJI if explicitly set → the matching STYLE_<n> entry by
- * name → the hardcoded default (🈵 / 🈸).
+ * name → the hardcoded default (🈵 / 🆓).
  *
  * NOTE: this is intentionally lazy (not evaluated at import time). Some
  * entrypoints — deploy-commands.js in particular — only need a command's
@@ -199,7 +199,7 @@ export function getBossConfigs() {
     const emoji = process.env[`BOSS_${i}_EMOJI`] || style?.emoji || '⚔️';
     const color = process.env[`BOSS_${i}_COLOR`] || style?.color || '#57F287';
     const fullEmoji = process.env[`BOSS_${i}_FULL_EMOJI`] || style?.fullEmoji || '🈵';
-    const missingEmoji = process.env[`BOSS_${i}_MISSING_EMOJI`] || style?.missingEmoji || '🈸';
+    const missingEmoji = process.env[`BOSS_${i}_MISSING_EMOJI`] || style?.missingEmoji || '🆓';
     const reminderChannelId = process.env[`BOSS_${i}_REMINDER_CHANNEL_ID`] || scheduleChannelId;
 
     configs.push({

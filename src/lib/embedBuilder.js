@@ -7,7 +7,7 @@ import { getWeekRangeLabel, formatTaipeiDateHeader, formatTaipeiTime, isPast } f
  * @param {string} args.emoji
  * @param {string} args.color - hex color
  * @param {string} [args.fullEmoji] - status emoji for a full team, defaults to 🈵
- * @param {string} [args.missingEmoji] - status emoji for a team missing people, defaults to 🈸
+ * @param {string} [args.missingEmoji] - status emoji for a team missing people, defaults to 🆓
  * @param {string} args.weekStartKey - YYYY-MM-DD (Tuesday)
  * @param {Array}  args.entries - [{ date, isFull, missingText, teamName, threadId, bossLabel }]
  *   bossLabel ({ name, emoji } | null) is only set in shared/tag-based mode
