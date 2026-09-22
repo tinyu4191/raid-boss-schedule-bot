@@ -81,6 +81,17 @@ import 'dotenv/config';
  * matching STYLE_<n> entry by name → else the hardcoded default (⚔️ /
  * #57F287). STYLE_<n> numbering is independent of BOSS_<n> numbering.
  *
+ * SEPARATE REMINDER CHANNEL: pre-raid reminders (see reminderScan.js) post
+ * to BOSS_<n>_SCHEDULE_CHANNEL_ID by default, same as the weekly schedule
+ * embed. When several BOSS_<n> configs (different signup forums) all point
+ * at the same schedule channel — one server's "everything in one place"
+ * setup — that channel ends up mixing several long-lived, repeatedly
+ * edited schedule embeds with a stream of one-off reminder pings, which
+ * gets busy fast. Setting BOSS_<n>_REMINDER_CHANNEL_ID sends that boss's
+ * reminders there instead, leaving the schedule channel to hold only the
+ * embeds. Optional — omit it and reminders keep going to the schedule
+ * channel exactly as before.
+ *
  * NOTE: this is intentionally lazy (not evaluated at import time). Some
  * entrypoints — deploy-commands.js in particular — only need a command's
  * *definition*, not a fully-configured .env, so importing this module
@@ -171,12 +182,14 @@ export function getBossConfigs() {
     const style = styles.get(name);
     const emoji = process.env[`BOSS_${i}_EMOJI`] || style?.emoji || '⚔️';
     const color = process.env[`BOSS_${i}_COLOR`] || style?.color || '#57F287';
+    const reminderChannelId = process.env[`BOSS_${i}_REMINDER_CHANNEL_ID`] || scheduleChannelId;
 
     configs.push({
       guild_id: guildId,
       boss_name: name,
       signup_channel_id: signupChannelId,
       schedule_channel_id: scheduleChannelId,
+      reminder_channel_id: reminderChannelId,
       emoji,
       color,
       boss_tags: bossTags,

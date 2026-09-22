@@ -17,7 +17,7 @@ import {
  * when a captain edits a title's date/time, which can move a thread from
  * one week's summary to another.
  */
-export async function syncBossSchedule(client, bossConfig) {
+async function syncBossScheduleInternal(client, bossConfig) {
   const { guild_id, boss_name, signup_channel_id, schedule_channel_id, emoji, color, boss_tags } = bossConfig;
   const isShared = Array.isArray(boss_tags);
 
@@ -110,4 +110,23 @@ export async function syncBossSchedule(client, bossConfig) {
       messageId: sent.id,
     });
   }
+}
+
+// Two thread events for the SAME boss can fire close enough together that
+// their syncBossSchedule calls overlap (e.g. our own titleNormalizer
+// renaming a thread fires a threadUpdate on top of the threadCreate that
+// triggered it). If both overlapping runs see the same "the tracked
+// message was deleted out-of-band" state before either has written its
+// replacement back to the DB, each creates its own new message —
+// duplicate schedule posts. Queuing per signup channel (one boss = one
+// signup channel) serializes these so a run always sees the previous
+// run's finished state, never a stale snapshot from mid-flight.
+const syncQueues = new Map(); // signup_channel_id -> tail Promise of the queue
+
+export function syncBossSchedule(client, bossConfig) {
+  const key = bossConfig.signup_channel_id;
+  const previous = syncQueues.get(key) || Promise.resolve();
+  const next = previous.catch(() => {}).then(() => syncBossScheduleInternal(client, bossConfig));
+  syncQueues.set(key, next);
+  return next;
 }
