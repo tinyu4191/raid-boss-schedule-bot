@@ -92,6 +92,20 @@ import 'dotenv/config';
  * embeds. Optional — omit it and reminders keep going to the schedule
  * channel exactly as before.
  *
+ * CUSTOM FULL/MISSING EMOJI: the 🈵 (full) / 🈸 (missing people) status
+ * emoji shown on every schedule line default to those two, but some
+ * servers want their own. BOSS_<n>_FULL_EMOJI / BOSS_<n>_MISSING_EMOJI
+ * override them, and — same pattern as EMOJI/COLOR — a matching
+ * STYLE_<n>_FULL_EMOJI / STYLE_<n>_MISSING_EMOJI is checked first as a
+ * shared fallback before the hardcoded default:
+ *
+ *   BOSS_1_FULL_EMOJI=🔴
+ *   BOSS_1_MISSING_EMOJI=🟢
+ *
+ * Resolution order, independently for each of the two: its own
+ * BOSS_<n>_*_EMOJI if explicitly set → the matching STYLE_<n> entry by
+ * name → the hardcoded default (🈵 / 🈸).
+ *
  * NOTE: this is intentionally lazy (not evaluated at import time). Some
  * entrypoints — deploy-commands.js in particular — only need a command's
  * *definition*, not a fully-configured .env, so importing this module
@@ -115,13 +129,15 @@ function findNumberedKeys(prefix, suffix) {
 }
 
 function loadBossStyles() {
-  const styles = new Map(); // boss name -> { emoji, color }
+  const styles = new Map(); // boss name -> { emoji, color, fullEmoji, missingEmoji }
   for (const i of findNumberedKeys('STYLE', 'NAME')) {
     const name = process.env[`STYLE_${i}_NAME`];
     if (!name) continue; // e.g. present but left blank
     styles.set(name, {
       emoji: process.env[`STYLE_${i}_EMOJI`] || null,
       color: process.env[`STYLE_${i}_COLOR`] || null,
+      fullEmoji: process.env[`STYLE_${i}_FULL_EMOJI`] || null,
+      missingEmoji: process.env[`STYLE_${i}_MISSING_EMOJI`] || null,
     });
   }
   return styles;
@@ -182,6 +198,8 @@ export function getBossConfigs() {
     const style = styles.get(name);
     const emoji = process.env[`BOSS_${i}_EMOJI`] || style?.emoji || '⚔️';
     const color = process.env[`BOSS_${i}_COLOR`] || style?.color || '#57F287';
+    const fullEmoji = process.env[`BOSS_${i}_FULL_EMOJI`] || style?.fullEmoji || '🈵';
+    const missingEmoji = process.env[`BOSS_${i}_MISSING_EMOJI`] || style?.missingEmoji || '🈸';
     const reminderChannelId = process.env[`BOSS_${i}_REMINDER_CHANNEL_ID`] || scheduleChannelId;
 
     configs.push({
@@ -192,6 +210,8 @@ export function getBossConfigs() {
       reminder_channel_id: reminderChannelId,
       emoji,
       color,
+      full_emoji: fullEmoji,
+      missing_emoji: missingEmoji,
       boss_tags: bossTags,
     });
   }

@@ -6,6 +6,8 @@ import { getWeekRangeLabel, formatTaipeiDateHeader, formatTaipeiTime, isPast } f
  * @param {string} args.bossName
  * @param {string} args.emoji
  * @param {string} args.color - hex color
+ * @param {string} [args.fullEmoji] - status emoji for a full team, defaults to 🈵
+ * @param {string} [args.missingEmoji] - status emoji for a team missing people, defaults to 🈸
  * @param {string} args.weekStartKey - YYYY-MM-DD (Tuesday)
  * @param {Array}  args.entries - [{ date, isFull, missingText, teamName, threadId, bossLabel }]
  *   bossLabel ({ name, emoji } | null) is only set in shared/tag-based mode
@@ -17,7 +19,17 @@ import { getWeekRangeLabel, formatTaipeiDateHeader, formatTaipeiTime, isPast } f
  *   prefixed with its own resolved boss label.
  * @returns {{ empty: true, content: string } | { empty: false, embed: EmbedBuilder }}
  */
-export function buildScheduleEmbed({ bossName, emoji, color, weekStartKey, entries, now = new Date(), isShared = false }) {
+export function buildScheduleEmbed({
+  bossName,
+  emoji,
+  color,
+  fullEmoji = '🈵',
+  missingEmoji = '🈸',
+  weekStartKey,
+  entries,
+  now = new Date(),
+  isShared = false,
+}) {
   if (entries.length === 0) {
     const content = isShared ? '🗓️ 本週尚無隊伍報名' : `${emoji} ${bossName}突襲 — 本週尚無隊伍報名`;
     return { empty: true, content };
@@ -36,7 +48,7 @@ export function buildScheduleEmbed({ bossName, emoji, color, weekStartKey, entri
   for (const [dayLabel, dayEntries] of byDay) {
     lines.push(`**${dayLabel}**`);
     for (const e of dayEntries) {
-      const statusEmoji = e.isFull ? '🈵' : '🟩';
+      const statusEmoji = e.isFull ? fullEmoji : missingEmoji;
 
       let afterPipe;
       if (isShared) {
