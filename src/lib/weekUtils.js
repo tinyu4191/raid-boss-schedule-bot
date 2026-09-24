@@ -53,3 +53,16 @@ export function formatTaipeiTime(date) {
 export function isPast(date, now = new Date()) {
   return date.getTime() < now.getTime();
 }
+
+/**
+ * Milliseconds from `now` until the next Asia/Taipei 00:00 boundary. Used
+ * to schedule the daily full resync (see index.js) that catches entries
+ * which crossed into "已結束" overnight with no thread activity to trigger
+ * a normal sync.
+ */
+export function msUntilNextTaipeiMidnight(now = new Date()) {
+  const tw = toTaipeiShifted(now);
+  const nextMidnightTaipei = new Date(Date.UTC(tw.getUTCFullYear(), tw.getUTCMonth(), tw.getUTCDate() + 1, 0, 0, 0, 0));
+  const nextMidnightReal = new Date(nextMidnightTaipei.getTime() - TW_OFFSET_MS);
+  return nextMidnightReal.getTime() - now.getTime();
+}

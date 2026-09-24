@@ -5,10 +5,12 @@ import { syncBossSchedule } from './lib/scheduleSync.js';
 import { scanAndSendReminders } from './lib/reminderScan.js';
 import { parseThreadTitle } from './lib/titleParser.js';
 import { normalizeThreadTitle } from './lib/titleNormalizer.js';
+import { msUntilNextTaipeiMidnight } from './lib/weekUtils.js';
 import { hasTitleFixNoticeBeenSent, markTitleFixNoticeSent } from './db/db.js';
 import { registerCommandHandlers } from './commands/index.js';
 
 const REMINDER_SCAN_INTERVAL_MS = 60 * 1000; // check every minute
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 const client = new Client({
   intents: [
@@ -80,6 +82,28 @@ async function runReminderScan() {
   }
 }
 
+// Threads only get re-synced when something actually happens to them
+// (created, edited, archived, deleted) — an entry that quietly crosses
+// its raid time with no such activity wouldn't get its ~~已結束~~
+// strikethrough until the next unrelated event happened to touch that
+// boss. This daily pass at Asia/Taipei midnight re-syncs every boss
+// regardless, so "已結束" stays accurate even on a quiet day.
+async function runFullResync(reason) {
+  for (const cfg of getBossConfigs()) {
+    await syncBossSchedule(client, cfg).catch((err) =>
+      console.error(`[${reason}] ${cfg.boss_name} failed:`, err)
+    );
+  }
+}
+
+function scheduleMidnightResync() {
+  const delay = msUntilNextTaipeiMidnight();
+  setTimeout(async () => {
+    await runFullResync('midnight resync');
+    setInterval(() => runFullResync('midnight resync'), ONE_DAY_MS);
+  }, delay);
+}
+
 client.once('clientReady', async () => {
   console.log(`Logged in as ${client.user.tag}`);
 
@@ -93,15 +117,12 @@ client.once('clientReady', async () => {
   );
 
   // Catch up on anything that changed while the bot was offline.
-  for (const cfg of bossConfigs) {
-    await syncBossSchedule(client, cfg).catch((err) =>
-      console.error(`[startup sync] ${cfg.boss_name} failed:`, err)
-    );
-  }
+  await runFullResync('startup sync');
 
-  // Kick off the pre-raid reminder scan loop.
+  // Kick off the pre-raid reminder scan loop and the daily midnight resync.
   await runReminderScan();
   setInterval(runReminderScan, REMINDER_SCAN_INTERVAL_MS);
+  scheduleMidnightResync();
 });
 
 registerCommandHandlers(client);
