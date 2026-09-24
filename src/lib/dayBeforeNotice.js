@@ -19,7 +19,8 @@ const DAY_BEFORE_LEAD_MINUTES = 24 * 60;
  * scanAndSendReminders).
  */
 export async function scanAndNotifyDayBefore(client, bossConfig) {
-  const { guild_id, boss_name, signup_channel_id } = bossConfig;
+  const { guild_id, boss_name, signup_channel_id, day_before_notice_enabled } = bossConfig;
+  if (day_before_notice_enabled === false) return; // this boss has it turned off in .env
 
   const forumChannel = await client.channels.fetch(signup_channel_id).catch(() => null);
   if (!forumChannel || forumChannel.type !== ChannelType.GuildForum) return;
