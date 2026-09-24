@@ -1,5 +1,6 @@
 import * as listboss from './listboss.js';
 import * as syncboss from './syncboss.js';
+import { MessageFlags } from 'discord.js';
 
 const commands = new Map([
   [listboss.data.name, listboss],
@@ -15,7 +16,7 @@ export function registerCommandHandlers(client) {
       await cmd.execute(interaction);
     } catch (err) {
       console.error(`[command:${interaction.commandName}]`, err);
-      const payload = { content: '❌ 執行指令時發生錯誤', ephemeral: true };
+      const payload = { content: '❌ 執行指令時發生錯誤', flags: MessageFlags.Ephemeral };
       if (interaction.replied || interaction.deferred) {
         await interaction.followUp(payload).catch(() => {});
       } else {

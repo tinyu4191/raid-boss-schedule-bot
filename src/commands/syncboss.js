@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { getBossConfigs } from '../config/bosses.js';
 import { syncBossSchedule } from '../lib/scheduleSync.js';
 
@@ -12,16 +12,16 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction) {
   const name = interaction.options.getString('name');
-  const bossConfigs = getBossConfigs();
+  const bossConfigs = getBossConfigs().filter((c) => c.guild_id === interaction.guildId);
   const cfg = bossConfigs.find((c) => c.boss_name === name);
   if (!cfg) {
     await interaction.reply({
-      content: `找不到「${name}」。目前設定的王：${bossConfigs.map((c) => c.boss_name).join('、') || '（無）'}`,
-      ephemeral: true,
+      content: `找不到「${name}」。這個伺服器目前設定的王：${bossConfigs.map((c) => c.boss_name).join('、') || '（無）'}`,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   await syncBossSchedule(interaction.client, cfg);
   await interaction.editReply(`✅ 已重新整理「${name}」的行程表`);
 }

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { getBossConfigs } from '../config/bosses.js';
 
 export const data = new SlashCommandBuilder().setName('listboss').setDescription('列出目前這個伺服器設定的突襲王');
@@ -6,7 +6,7 @@ export const data = new SlashCommandBuilder().setName('listboss').setDescription
 export async function execute(interaction) {
   const bossConfigs = getBossConfigs().filter((c) => c.guild_id === interaction.guildId);
   if (bossConfigs.length === 0) {
-    await interaction.reply({ content: '這個伺服器目前 .env 尚未設定任何王', ephemeral: true });
+    await interaction.reply({ content: '這個伺服器目前 .env 尚未設定任何王', flags: MessageFlags.Ephemeral });
     return;
   }
   const lines = bossConfigs.map((c) => {
@@ -20,5 +20,5 @@ export async function execute(interaction) {
     }
     return base;
   });
-  await interaction.reply({ content: lines.join('\n'), ephemeral: true });
+  await interaction.reply({ content: lines.join('\n'), flags: MessageFlags.Ephemeral });
 }
