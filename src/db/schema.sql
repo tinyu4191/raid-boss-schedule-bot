@@ -28,3 +28,15 @@ CREATE TABLE IF NOT EXISTS title_fix_notices (
   thread_id   TEXT PRIMARY KEY,
   notified_at TEXT NOT NULL
 );
+
+-- Tracks which threads have already gotten the "24 hours before raid time,
+-- still missing people" @everyone nudge (see dayBeforeNotice.js), so it
+-- only ever fires once per thread even if the team is still missing
+-- people the whole way up to raid time.
+CREATE TABLE IF NOT EXISTS day_before_notices (
+  guild_id    TEXT NOT NULL,
+  boss_name   TEXT NOT NULL,
+  thread_id   TEXT NOT NULL,
+  notified_at TEXT NOT NULL,
+  PRIMARY KEY (thread_id)
+);

@@ -76,3 +76,18 @@ export function markTitleFixNoticeSent(threadId) {
     ON CONFLICT(thread_id) DO NOTHING
   `).run(threadId, new Date().toISOString());
 }
+
+// ---------- day_before_notices ----------
+
+export function hasDayBeforeNoticeBeenSent(threadId) {
+  const row = db.prepare(`SELECT 1 FROM day_before_notices WHERE thread_id = ?`).get(threadId);
+  return !!row;
+}
+
+export function markDayBeforeNoticeSent(guildId, bossName, threadId) {
+  db.prepare(`
+    INSERT INTO day_before_notices (guild_id, boss_name, thread_id, notified_at)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(thread_id) DO NOTHING
+  `).run(guildId, bossName, threadId, new Date().toISOString());
+}

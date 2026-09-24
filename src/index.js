@@ -3,6 +3,7 @@ import { Client, GatewayIntentBits, Partials } from 'discord.js';
 import { getBossConfigs, getBossConfigBySignupChannel } from './config/bosses.js';
 import { syncBossSchedule } from './lib/scheduleSync.js';
 import { scanAndSendReminders } from './lib/reminderScan.js';
+import { scanAndNotifyDayBefore } from './lib/dayBeforeNotice.js';
 import { parseThreadTitle } from './lib/titleParser.js';
 import { normalizeThreadTitle } from './lib/titleNormalizer.js';
 import { msUntilNextTaipeiMidnight } from './lib/weekUtils.js';
@@ -78,6 +79,9 @@ async function runReminderScan() {
   for (const cfg of getBossConfigs()) {
     await scanAndSendReminders(client, cfg).catch((err) =>
       console.error(`[reminderScan] ${cfg.boss_name} failed:`, err)
+    );
+    await scanAndNotifyDayBefore(client, cfg).catch((err) =>
+      console.error(`[dayBeforeNotice] ${cfg.boss_name} failed:`, err)
     );
   }
 }
