@@ -87,6 +87,8 @@ async function syncBossScheduleInternal(client, bossConfig) {
       color,
       fullEmoji: bossConfig.full_emoji,
       missingEmoji: bossConfig.missing_emoji,
+      scheduleTitleTemplate: bossConfig.schedule_title_template,
+      emptyTextTemplate: bossConfig.empty_text_template,
       weekStartKey: weekKey,
       entries,
       now,

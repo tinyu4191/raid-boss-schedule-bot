@@ -247,6 +247,32 @@ Resolution order, independently for each of the two: its own
 `BOSS_<n>_*_EMOJI` if explicitly set → the matching `STYLE_<n>` entry by
 name → the hardcoded default (`🈵` / `🈸`).
 
+### Custom titles (`SCHEDULE_TITLE` / `EMPTY_TEXT` / `REMINDER_TITLE`)
+
+The schedule embed's title, its "no signups" text, and the 30-minute
+reminder embed's title are hardcoded phrasing by default — some servers
+want their own wording. Three optional fields, each a template using
+`{emoji}` / `{name}` / `{team}` placeholders (an unrecognized
+`{placeholder}` is left as literal text, so a typo is visible rather than
+silently vanishing):
+
+```
+BOSS_1_SCHEDULE_TITLE=🏆 {name}出團總表
+BOSS_1_EMPTY_TEXT={emoji} {name}本週沒有人報名喔
+BOSS_1_REMINDER_TITLE={emoji} 快出發！{name} - {team}
+```
+
+`{team}` only has a meaningful value for `REMINDER_TITLE` (that specific
+thread's team name/status); it's unavailable for
+`SCHEDULE_TITLE`/`EMPTY_TEXT` since those describe the whole week, not
+one team. Same `STYLE_<n>` fallback pattern as `EMOJI`/`COLOR`: a boss's
+own template if set → the matching `STYLE_<n>` entry by name → the
+existing hardcoded default phrasing (completely unchanged) when neither
+is set. In shared/tag mode, a custom `SCHEDULE_TITLE`/`EMPTY_TEXT`
+applies to the whole shared schedule — there's no single boss name to
+substitute unless the pool itself has been given a meaningful
+`BOSS_<n>_NAME`.
+
 ### Bot permissions / intents needed
 
 - Gateway intents: `Guilds`, `GuildMessages`, `MessageContent` (already set
@@ -256,9 +282,13 @@ name → the hardcoded default (`🈵` / `🈸`).
   with a "disallowed intents" error. Restart the bot after toggling it.
 - Bot permissions in the signup Forum: View Channel, Read Message History,
   **Manage Threads** (needed to rename a thread — see
-  [Thread title auto-fix](#thread-title-auto-fix)), Send Messages (for the
-  "please fix the title manually" notice), and **Mention @everyone, @here,
-  and All Roles** (needed for the
+  [Thread title auto-fix](#thread-title-auto-fix)), **Send Messages in
+  Threads** (在討論串和貼文中傳送訊息 — needed for anything the bot posts
+  *inside* a signup post: the "please fix the title manually" notice and
+  the 24-hour nudge. This is a different permission from "Send Messages
+  and Create Posts", which only covers creating new posts in the Forum —
+  a bot can have the latter and still be unable to reply inside a
+  thread), and **Mention @everyone, @here, and All Roles** (needed for the
   [24-hour missing-people nudge](#24-hour-missing-people-nudge) — without
   it, that message still sends but the `@everyone` silently doesn't ping
   anyone).

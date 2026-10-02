@@ -1,5 +1,6 @@
 import { EmbedBuilder } from 'discord.js';
 import { getWeekRangeLabel, formatTaipeiDateHeader, formatTaipeiTime, isPast } from './weekUtils.js';
+import { applyTitleTemplate } from './titleTemplate.js';
 
 /**
  * @param {object} args
@@ -8,6 +9,11 @@ import { getWeekRangeLabel, formatTaipeiDateHeader, formatTaipeiTime, isPast } f
  * @param {string} args.color - hex color
  * @param {string} [args.fullEmoji] - status emoji for a full team, defaults to 🈵
  * @param {string} [args.missingEmoji] - status emoji for a team missing people, defaults to 🆓
+ * @param {string} [args.scheduleTitleTemplate] - custom embed title template
+ *   ({emoji}/{name} placeholders — see config/bosses.js CUSTOM TITLES).
+ *   Falls back to the existing hardcoded phrasing when not set.
+ * @param {string} [args.emptyTextTemplate] - custom "no signups" text
+ *   template, same placeholders and fallback behavior.
  * @param {string} args.weekStartKey - YYYY-MM-DD (Tuesday)
  * @param {Array}  args.entries - [{ date, isFull, missingText, teamName, threadId, bossLabel }]
  *   bossLabel ({ name, emoji } | null) is only set in shared/tag-based mode
@@ -25,13 +31,21 @@ export function buildScheduleEmbed({
   color,
   fullEmoji = '🈵',
   missingEmoji = '🆓',
+  scheduleTitleTemplate = null,
+  emptyTextTemplate = null,
   weekStartKey,
   entries,
   now = new Date(),
   isShared = false,
 }) {
+  const templateVars = { emoji, name: bossName };
+
   if (entries.length === 0) {
-    const content = isShared ? '🗓️ 本週尚無隊伍報名' : `${emoji} ${bossName}突襲 — 本週尚無隊伍報名`;
+    const content = emptyTextTemplate
+      ? applyTitleTemplate(emptyTextTemplate, templateVars)
+      : isShared
+        ? '🗓️ 本週尚無隊伍報名'
+        : `${emoji} ${bossName}突襲 — 本週尚無隊伍報名`;
     return { empty: true, content };
   }
 
@@ -77,7 +91,11 @@ export function buildScheduleEmbed({
     lines.push('');
   }
 
-  const title = isShared ? '🗓️ 本週出團行程表' : `${emoji} ${bossName}突襲 — 本週行程表`;
+  const title = scheduleTitleTemplate
+    ? applyTitleTemplate(scheduleTitleTemplate, templateVars)
+    : isShared
+      ? '🗓️ 本週出團行程表'
+      : `${emoji} ${bossName}突襲 — 本週行程表`;
 
   const embed = new EmbedBuilder()
     .setTitle(title)

@@ -116,6 +116,27 @@ import 'dotenv/config';
  * Everything else about that boss (schedule, 30-minute reminder, etc.)
  * keeps working as usual — this only silences the 24-hour nudge.
  *
+ * CUSTOM TITLES: the schedule embed's title, its "no signups" text, and
+ * the 30-minute reminder embed's title are all hardcoded phrasing by
+ * default — some servers want their own wording. Three optional fields,
+ * each a template using {emoji} / {name} / {team} placeholders (an
+ * unrecognized {placeholder} is left as literal text, so a typo is
+ * visible rather than silently vanishing):
+ *
+ *   BOSS_1_SCHEDULE_TITLE=🏆 {name}出團總表
+ *   BOSS_1_EMPTY_TEXT={emoji} {name}本週沒有人報名喔
+ *   BOSS_1_REMINDER_TITLE={emoji} 快出發！{name} - {team}
+ *
+ * {team} only has a meaningful value for REMINDER_TITLE (that thread's
+ * team name/status); it's unavailable for SCHEDULE_TITLE/EMPTY_TEXT since
+ * those describe the whole week, not one team. Same STYLE_<n> fallback
+ * pattern as EMOJI/COLOR: BOSS_<n>'s own template if set → the matching
+ * STYLE_<n> entry by name → the existing hardcoded default phrasing
+ * (unchanged) when neither is set. In shared/tag mode, a custom
+ * SCHEDULE_TITLE/EMPTY_TEXT applies to the whole shared schedule (there's
+ * no single boss name to substitute unless you've given the pool itself
+ * a meaningful BOSS_<n>_NAME).
+ *
  * NOTE: this is intentionally lazy (not evaluated at import time). Some
  * entrypoints — deploy-commands.js in particular — only need a command's
  * *definition*, not a fully-configured .env, so importing this module
@@ -139,7 +160,7 @@ function findNumberedKeys(prefix, suffix) {
 }
 
 function loadBossStyles() {
-  const styles = new Map(); // boss name -> { emoji, color, fullEmoji, missingEmoji }
+  const styles = new Map(); // boss name -> { emoji, color, fullEmoji, missingEmoji, scheduleTitleTemplate, emptyTextTemplate, reminderTitleTemplate }
   for (const i of findNumberedKeys('STYLE', 'NAME')) {
     const name = process.env[`STYLE_${i}_NAME`];
     if (!name) continue; // e.g. present but left blank
@@ -148,6 +169,9 @@ function loadBossStyles() {
       color: process.env[`STYLE_${i}_COLOR`] || null,
       fullEmoji: process.env[`STYLE_${i}_FULL_EMOJI`] || null,
       missingEmoji: process.env[`STYLE_${i}_MISSING_EMOJI`] || null,
+      scheduleTitleTemplate: process.env[`STYLE_${i}_SCHEDULE_TITLE`] || null,
+      emptyTextTemplate: process.env[`STYLE_${i}_EMPTY_TEXT`] || null,
+      reminderTitleTemplate: process.env[`STYLE_${i}_REMINDER_TITLE`] || null,
     });
   }
   return styles;
@@ -221,6 +245,9 @@ export function getBossConfigs() {
     const missingEmoji = process.env[`BOSS_${i}_MISSING_EMOJI`] || style?.missingEmoji || '🈸';
     const reminderChannelId = process.env[`BOSS_${i}_REMINDER_CHANNEL_ID`] || scheduleChannelId;
     const dayBeforeNoticeEnabled = parseEnabledFlag(process.env[`BOSS_${i}_DAY_BEFORE_NOTICE`], true);
+    const scheduleTitleTemplate = process.env[`BOSS_${i}_SCHEDULE_TITLE`] || style?.scheduleTitleTemplate || null;
+    const emptyTextTemplate = process.env[`BOSS_${i}_EMPTY_TEXT`] || style?.emptyTextTemplate || null;
+    const reminderTitleTemplate = process.env[`BOSS_${i}_REMINDER_TITLE`] || style?.reminderTitleTemplate || null;
 
     configs.push({
       guild_id: guildId,
@@ -234,6 +261,9 @@ export function getBossConfigs() {
       missing_emoji: missingEmoji,
       boss_tags: bossTags,
       day_before_notice_enabled: dayBeforeNoticeEnabled,
+      schedule_title_template: scheduleTitleTemplate,
+      empty_text_template: emptyTextTemplate,
+      reminder_title_template: reminderTitleTemplate,
     });
   }
 

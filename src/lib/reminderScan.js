@@ -2,6 +2,7 @@ import { ChannelType, EmbedBuilder } from 'discord.js';
 import { parseThreadTitle } from './titleParser.js';
 import { parseStarterMessage } from './starterMessageParser.js';
 import { resolveBossTag } from './forumTags.js';
+import { applyTitleTemplate } from './titleTemplate.js';
 import { hasReminderBeenSent, markReminderSent } from '../db/db.js';
 
 const REMINDER_LEAD_MINUTES = 30;
@@ -14,7 +15,8 @@ const REMINDER_LEAD_MINUTES = 30;
  * thread's reminder fire exactly once regardless of how often this runs.
  */
 export async function scanAndSendReminders(client, bossConfig) {
-  const { guild_id, boss_name, signup_channel_id, reminder_channel_id, emoji, color, boss_tags } = bossConfig;
+  const { guild_id, boss_name, signup_channel_id, reminder_channel_id, emoji, color, boss_tags, reminder_title_template } =
+    bossConfig;
   const isShared = Array.isArray(boss_tags);
 
   const forumChannel = await client.channels.fetch(signup_channel_id).catch(() => null);
@@ -41,14 +43,22 @@ export async function scanAndSendReminders(client, bossConfig) {
     const bossLabel = isShared ? resolveBossTag(thread, forumChannel, boss_tags) : null;
     const displayBoss = bossLabel ? { name: bossLabel.name, emoji: bossLabel.emoji || emoji } : { name: boss_name, emoji };
 
-    await sendReminder({ client, thread, parsed, displayBoss, color, reminderChannel, guildId: guild_id })
-      .catch((err) => console.error(`[reminder] ${boss_name} / ${thread.name} failed:`, err));
+    await sendReminder({
+      client,
+      thread,
+      parsed,
+      displayBoss,
+      color,
+      reminderTitleTemplate: reminder_title_template,
+      reminderChannel,
+      guildId: guild_id,
+    }).catch((err) => console.error(`[reminder] ${boss_name} / ${thread.name} failed:`, err));
 
     markReminderSent(guild_id, boss_name, thread.id);
   }
 }
 
-async function sendReminder({ client, thread, parsed, displayBoss, color, reminderChannel, guildId }) {
+async function sendReminder({ client, thread, parsed, displayBoss, color, reminderTitleTemplate, reminderChannel, guildId }) {
   const starterMessage = await thread.fetchStarterMessage().catch(() => null);
   const { memberIds, channelNumber } = parseStarterMessage(starterMessage, thread.ownerId);
 
@@ -59,8 +69,12 @@ async function sendReminder({ client, thread, parsed, displayBoss, color, remind
 
   const content = `📣 ${REMINDER_LEAD_MINUTES} 分鐘後出團提醒 — 出團成員請注意：\n${mentionLine}`;
 
+  const title = reminderTitleTemplate
+    ? applyTitleTemplate(reminderTitleTemplate, { emoji: displayBoss.emoji, name: displayBoss.name, team: teamLabel })
+    : `${displayBoss.emoji} ${displayBoss.name}突襲 — ${teamLabel}`;
+
   const embed = new EmbedBuilder()
-    .setTitle(`${displayBoss.emoji} ${displayBoss.name}突襲 — ${teamLabel}`)
+    .setTitle(title)
     .addFields(
       { name: '🕒 時間', value: formatReminderTime(parsed.date), inline: true },
       { name: '📡 頻道', value: channelText, inline: true },
