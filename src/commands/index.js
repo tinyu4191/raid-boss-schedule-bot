@@ -13,6 +13,15 @@ const commands = new Map([
 
 export function registerCommandHandlers(client) {
   client.on('interactionCreate', async (interaction) => {
+    if (interaction.isAutocomplete()) {
+      const acmd = commands.get(interaction.commandName);
+      // Must answer within 3 seconds; on any failure just offer nothing.
+      await (acmd?.autocomplete?.(interaction) ?? Promise.resolve()).catch((err) => {
+        console.error(`[autocomplete:${interaction.commandName}]`, err);
+        return interaction.respond([]).catch(() => {});
+      });
+      return;
+    }
     if (!interaction.isChatInputCommand()) return;
     const cmd = commands.get(interaction.commandName);
     if (!cmd) return;

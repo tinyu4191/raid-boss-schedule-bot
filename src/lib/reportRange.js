@@ -1,4 +1,4 @@
-import { getTaipeiToday, weekKeyOfTaipeiDate, getWeekStartKey, listWeekKeys } from './weekUtils.js';
+import { getTaipeiToday, weekKeyOfTaipeiDate, getWeekStartKey, listWeekKeys, shiftWeekKey } from './weekUtils.js';
 
 export const MAX_RANGE_WEEKS = 53;
 
@@ -51,4 +51,61 @@ export function resolveWeekRange(startInput, endInput, now = new Date()) {
   if (weekCount > MAX_RANGE_WEEKS) return { ok: false, error: `範圍太長（${weekCount} 週），上限 ${MAX_RANGE_WEEKS} 週` };
 
   return { ok: true, startKey, endKey, weekCount, includesCurrentWeek: endKey >= currentKey };
+}
+
+const MAX_CHOICES = 25; // Discord's limit for autocomplete results
+
+function pad2(n) {
+  return String(n).padStart(2, '0');
+}
+
+/** "09/29～10/05（上週）" — years are added only when they differ from the current Taipei year. */
+export function formatWeekChoiceLabel(weekKey, now = new Date()) {
+  const [y, m, d] = weekKey.split('-').map(Number);
+  const end = new Date(Date.UTC(y, m - 1, d + 6));
+  const thisYear = getTaipeiToday(now).y;
+  const showYear = y !== thisYear || end.getUTCFullYear() !== thisYear;
+  const startPart = `${showYear ? `${y}/` : ''}${pad2(m)}/${pad2(d)}`;
+  const endPart = `${showYear ? `${end.getUTCFullYear()}/` : ''}${pad2(end.getUTCMonth() + 1)}/${pad2(end.getUTCDate())}`;
+
+  const currentKey = getWeekStartKey(now);
+  const lastKey = shiftWeekKey(currentKey, -1);
+  const tag = weekKey === currentKey ? '（本週，進行中）' : weekKey === lastKey ? '（上週）' : '';
+  return `${startPart}～${endPart}${tag}`;
+}
+
+/**
+ * Choices for the start/end week dropdowns: the most recent weeks first
+ * (newest at the top), filtered by whatever the user has typed. Typing a
+ * date also surfaces that exact week, so weeks older than the list are
+ * still reachable. `minKey` hides weeks before it (used for the "end"
+ * dropdown once a start week has been picked).
+ * @returns {Array<{ name: string, value: string }>} value is the week's Tuesday (YYYY-MM-DD)
+ */
+export function buildWeekChoices({ typed = '', minKey = null, now = new Date() } = {}) {
+  const currentKey = getWeekStartKey(now);
+  const floorKey = minKey && minKey <= currentKey ? minKey : null;
+
+  const keys = [];
+  for (let i = 0; i < MAX_CHOICES * 2 && keys.length < MAX_CHOICES * 2; i++) {
+    const key = shiftWeekKey(currentKey, -i);
+    if (floorKey && key < floorKey) break;
+    keys.push(key);
+  }
+
+  let choices = keys.map((key) => ({ name: formatWeekChoiceLabel(key, now), value: key }));
+
+  const text = String(typed).trim();
+  if (text) {
+    const parsed = parseUserDate(text, now);
+    const exact = parsed ? weekKeyOfTaipeiDate(parsed.y, parsed.m, parsed.d) : null;
+    const filtered = choices.filter((c) => c.name.includes(text) || c.value.includes(text));
+    if (exact && exact <= currentKey && (!floorKey || exact >= floorKey)) {
+      const exactChoice = { name: formatWeekChoiceLabel(exact, now), value: exact };
+      choices = [exactChoice, ...filtered.filter((c) => c.value !== exact)];
+    } else {
+      choices = filtered;
+    }
+  }
+  return choices.slice(0, MAX_CHOICES);
 }

@@ -503,7 +503,8 @@ channel. Run `npm run deploy-commands` once to register the command.
 - `/weeklyreport [weeks_ago] [post]` (requires Manage Server) — previews
   or manually sends one week's report (see above).
 - `/givemereport start end [post]` (requires Manage Server) — same report
-  over a range of weeks. `start` / `end` are dates (`2026-09-29` or `9/29`);
+  over a range of weeks. `start` / `end` are dropdowns listing the most recent
+  weeks (type to filter, or type any date such as `2026-09-29` / `9/29`);
   each selects the week (Tue–Mon) that contains it, and the end week is
   included. Max 53 weeks. A range report adds a per-week count; if the range
   includes the unfinished current week the footer says so. Preview by

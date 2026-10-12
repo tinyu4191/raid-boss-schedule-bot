@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
-import { resolveWeekRange } from '../lib/reportRange.js';
+import { resolveWeekRange, parseUserDate, buildWeekChoices } from '../lib/reportRange.js';
+import { weekKeyOfTaipeiDate } from '../lib/weekUtils.js';
 import { respondWithReport } from '../lib/reportCommand.js';
 
 export const data = new SlashCommandBuilder()
@@ -9,13 +10,15 @@ export const data = new SlashCommandBuilder()
   .addStringOption((o) =>
     o
       .setName('start')
-      .setDescription('起始週：該週內任何一天都可以，例如 2026-09-29 或 9/29')
+      .setDescription('起始週：從選單選擇，或輸入該週內任一天（例如 9/29）')
+      .setAutocomplete(true)
       .setRequired(true)
   )
   .addStringOption((o) =>
     o
       .setName('end')
-      .setDescription('結束週：該週內任何一天都可以，例如 2026-10-26 或 10/26（含該週）')
+      .setDescription('結束週（含該週）：從選單選擇，或輸入該週內任一天（例如 10/26）')
+      .setAutocomplete(true)
       .setRequired(true)
   )
   .addBooleanOption((o) =>
@@ -37,4 +40,17 @@ export async function execute(interaction) {
     post: interaction.options.getBoolean('post') ?? false,
     includesCurrentWeek: range.includesCurrentWeek,
   });
+}
+
+// Dropdown for the start/end options. Weeks are generated live (newest
+// first), so the list is always current; once a start week is chosen the
+// end list only offers that week and later.
+export async function autocomplete(interaction) {
+  const focused = interaction.options.getFocused(true);
+  let minKey = null;
+  if (focused.name === 'end') {
+    const startDate = parseUserDate(interaction.options.getString('start') ?? '');
+    if (startDate) minKey = weekKeyOfTaipeiDate(startDate.y, startDate.m, startDate.d);
+  }
+  await interaction.respond(buildWeekChoices({ typed: focused.value, minKey }));
 }
