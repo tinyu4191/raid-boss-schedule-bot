@@ -4,6 +4,7 @@ import { getBossConfigs, getBossConfigBySignupChannel } from './config/bosses.js
 import { syncBossSchedule } from './lib/scheduleSync.js';
 import { scanAndSendReminders } from './lib/reminderScan.js';
 import { scanAndNotifyDayBefore } from './lib/dayBeforeNotice.js';
+import { scanAndSendWeeklyReports } from './lib/weeklyReport.js';
 import { parseThreadTitle } from './lib/titleParser.js';
 import { normalizeThreadTitle } from './lib/titleNormalizer.js';
 import { msUntilNextTaipeiMidnight } from './lib/weekUtils.js';
@@ -84,6 +85,9 @@ async function runReminderScan() {
       console.error(`[dayBeforeNotice] ${cfg.boss_name} failed:`, err)
     );
   }
+  await scanAndSendWeeklyReports(client, getBossConfigs()).catch((err) =>
+    console.error('[weeklyReport] scan failed:', err)
+  );
 }
 
 // Threads only get re-synced when something actually happens to them

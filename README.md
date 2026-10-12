@@ -457,6 +457,36 @@ to touch that boss — which might not be until the next signup. To keep
 "已結束" accurate regardless, every boss gets a full resync once a day at
 Asia/Taipei 00:00, independent of any thread activity.
 
+## Weekly report (Tuesday 08:00 Taipei)
+
+Every Tuesday at 08:00 Asia/Taipei the bot can post last week's raid
+statistics (the week is Tuesday–Monday, same as the schedule). What counts:
+
+- A team counts if its **raid date** (from the thread title) falls in last
+  week and its title is valid, i.e. it appears on the schedule. Posting
+  time is irrelevant; malformed titles are ignored.
+- Shown: total teams, full vs. not-full (count and %), a captain ranking
+  (thread owner, shown as an @mention that never notifies anyone), and a
+  per-boss breakdown (⚔️; in shared/tag mode it uses each thread's tag).
+
+Opt in per boss — there is **no default channel**:
+
+```
+BOSS_7_REPORT_CHANNEL_ID=報告頻道ID
+BOSS_7_WEEKLY_REPORT=false     # optional: unsubscribe but keep the channel
+```
+
+Bosses in the same server that point at the same report channel are merged
+into one report. Each (channel, week) is sent once (`weekly_reports_sent`);
+if the bot was down at 08:00 it catches up later the same Tuesday.
+Threads deleted before the report runs can't be counted.
+
+`/weeklyreport [weeks_ago] [post]` (Manage Server) previews the report
+privately, works before a channel is configured, and with `post:true`
+sends it to the configured channel (a manual send does not suppress the
+scheduled one). The bot needs Send Messages + Embed Links in the report
+channel. Run `npm run deploy-commands` once to register the command.
+
 ## Commands
 
 - `/listboss` — lists the bosses currently loaded from `.env` for the
@@ -466,6 +496,8 @@ Asia/Taipei 00:00, independent of any thread activity.
   sync for one boss. Useful right after editing `.env` + restarting, or if
   you ever suspect a missed event, without waiting for the next thread
   change.
+- `/weeklyreport [weeks_ago] [post]` (requires Manage Server) — previews
+  or manually sends the weekly report (see above).
 
 ## Operational scripts
 
@@ -510,6 +542,8 @@ track state that has to persist between restarts:
   @-mentioned again on every subsequent edit.
 - `day_before_notices` — which threads have already gotten the 24-hour
   missing-people `@everyone` nudge, so it only ever fires once per thread.
+- `weekly_reports_sent` — which (report channel, week) pairs already got
+  their weekly report, so each is sent exactly once.
 
 ## Known limitations / next iterations
 

@@ -94,11 +94,17 @@ export function normalizeThreadTitle(rawTitle, referenceDate = new Date()) {
 
   // Recompute the weekday from the validated date, same year-inference
   // rule as titleParser.js, rather than trusting the original text.
-  const refYear = referenceDate.getFullYear();
+  const refYear = new Date(referenceDate.getTime() + 8 * 60 * 60 * 1000).getUTCFullYear(); // Taipei year, independent of host TZ
   let dateObj = new Date(Date.UTC(refYear, month - 1, day, hour - 8, minute));
   const twoMonthsMs = 60 * 24 * 60 * 60 * 1000;
   if (dateObj.getTime() < referenceDate.getTime() - twoMonthsMs) {
     dateObj = new Date(Date.UTC(refYear + 1, month - 1, day, hour - 8, minute));
+  }
+  // Mirror case: reference is early January and the title is late December
+  // of the year before (e.g. a 12/30 team viewed on 1/2) — don't read it as
+  // 11+ months in the future.
+  if (dateObj.getTime() > referenceDate.getTime() + 300 * 24 * 60 * 60 * 1000) {
+    dateObj = new Date(Date.UTC(refYear - 1, month - 1, day, hour - 8, minute));
   }
   const twDate = new Date(dateObj.getTime() + 8 * 60 * 60 * 1000);
   const weekdayChar = WEEKDAY_CHARS[twDate.getUTCDay()];

@@ -91,3 +91,20 @@ export function markDayBeforeNoticeSent(guildId, bossName, threadId) {
     ON CONFLICT(thread_id) DO NOTHING
   `).run(guildId, bossName, threadId, new Date().toISOString());
 }
+
+// ---------- weekly_reports_sent ----------
+
+export function hasWeeklyReportBeenSent(channelId, reportWeekKey) {
+  const row = db
+    .prepare(`SELECT 1 FROM weekly_reports_sent WHERE channel_id = ? AND report_week_key = ?`)
+    .get(channelId, reportWeekKey);
+  return !!row;
+}
+
+export function markWeeklyReportSent(guildId, channelId, reportWeekKey) {
+  db.prepare(`
+    INSERT INTO weekly_reports_sent (guild_id, channel_id, report_week_key, sent_at)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(channel_id, report_week_key) DO NOTHING
+  `).run(guildId, channelId, reportWeekKey, new Date().toISOString());
+}

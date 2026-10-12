@@ -116,6 +116,16 @@ import 'dotenv/config';
  * Everything else about that boss (schedule, 30-minute reminder, etc.)
  * keeps working as usual — this only silences the 24-hour nudge.
  *
+ * WEEKLY REPORT: every Tuesday 08:00 (Taipei) the bot can post last
+ * week's raid statistics (see weeklyReport.js). Opt-in per boss by giving
+ * it a destination channel; there is deliberately NO default channel.
+ *
+ *   BOSS_1_REPORT_CHANNEL_ID=<頻道ID>
+ *   BOSS_1_WEEKLY_REPORT=false      # optional: unsubscribe while keeping the channel set
+ *
+ * Bosses in the same server pointing at the same report channel are
+ * combined into ONE report.
+ *
  * CUSTOM TITLES: the schedule embed's title, its "no signups" text, and
  * the 30-minute reminder embed's title are all hardcoded phrasing by
  * default — some servers want their own wording. Three optional fields,
@@ -245,6 +255,8 @@ export function getBossConfigs() {
     const missingEmoji = process.env[`BOSS_${i}_MISSING_EMOJI`] || style?.missingEmoji || '🈸';
     const reminderChannelId = process.env[`BOSS_${i}_REMINDER_CHANNEL_ID`] || scheduleChannelId;
     const dayBeforeNoticeEnabled = parseEnabledFlag(process.env[`BOSS_${i}_DAY_BEFORE_NOTICE`], true);
+    const reportChannelId = process.env[`BOSS_${i}_REPORT_CHANNEL_ID`] || null; // no default: unset = no report
+    const weeklyReportEnabled = parseEnabledFlag(process.env[`BOSS_${i}_WEEKLY_REPORT`], true);
     const scheduleTitleTemplate = process.env[`BOSS_${i}_SCHEDULE_TITLE`] || style?.scheduleTitleTemplate || null;
     const emptyTextTemplate = process.env[`BOSS_${i}_EMPTY_TEXT`] || style?.emptyTextTemplate || null;
     const reminderTitleTemplate = process.env[`BOSS_${i}_REMINDER_TITLE`] || style?.reminderTitleTemplate || null;
@@ -261,6 +273,8 @@ export function getBossConfigs() {
       missing_emoji: missingEmoji,
       boss_tags: bossTags,
       day_before_notice_enabled: dayBeforeNoticeEnabled,
+      report_channel_id: reportChannelId,
+      weekly_report_enabled: weeklyReportEnabled,
       schedule_title_template: scheduleTitleTemplate,
       empty_text_template: emptyTextTemplate,
       reminder_title_template: reminderTitleTemplate,

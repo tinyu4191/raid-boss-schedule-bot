@@ -66,3 +66,33 @@ export function msUntilNextTaipeiMidnight(now = new Date()) {
   const nextMidnightReal = new Date(nextMidnightTaipei.getTime() - TW_OFFSET_MS);
   return nextMidnightReal.getTime() - now.getTime();
 }
+
+/** Taipei wall-clock parts of a real Date: { weekday (0=Sun..6=Sat), hour, minute }. */
+export function getTaipeiParts(date) {
+  const tw = toTaipeiShifted(date);
+  return { weekday: tw.getUTCDay(), hour: tw.getUTCHours(), minute: tw.getUTCMinutes() };
+}
+
+/** The week_start key (Tuesday, Taipei) of the week before the one containing `date`. */
+export function getPreviousWeekStartKey(date) {
+  const thisKey = getWeekStartKey(date);
+  const [y, m, d] = thisKey.split('-').map(Number);
+  const prev = new Date(Date.UTC(y, m - 1, d - 7));
+  return formatDateKey(prev);
+}
+
+/** Shifts a week_start key by `weeks` (negative = earlier). */
+export function shiftWeekKey(weekStartKey, weeks) {
+  const [y, m, d] = weekStartKey.split('-').map(Number);
+  return formatDateKey(new Date(Date.UTC(y, m - 1, d + weeks * 7)));
+}
+
+/**
+ * A real Date safely inside the given week (Friday 12:00 Taipei) — used as
+ * the reference date when parsing titles for a past week, so year
+ * inference is right even across New Year.
+ */
+export function weekMidpoint(weekStartKey) {
+  const [y, m, d] = weekStartKey.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + 3, 12 - 8, 0));
+}

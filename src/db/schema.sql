@@ -40,3 +40,15 @@ CREATE TABLE IF NOT EXISTS day_before_notices (
   notified_at TEXT NOT NULL,
   PRIMARY KEY (thread_id)
 );
+
+-- Tracks which weekly reports (see weeklyReport.js) have already been
+-- posted, so the every-minute scan sends each one exactly once. Keyed by
+-- the destination channel (several bosses can share one report channel
+-- and are combined into a single report) and the week being reported.
+CREATE TABLE IF NOT EXISTS weekly_reports_sent (
+  guild_id        TEXT NOT NULL,
+  channel_id      TEXT NOT NULL,
+  report_week_key TEXT NOT NULL, -- the Tuesday (YYYY-MM-DD) of the week that was reported on
+  sent_at         TEXT NOT NULL,
+  PRIMARY KEY (channel_id, report_week_key)
+);

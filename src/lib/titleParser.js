@@ -47,7 +47,7 @@ export function parseThreadTitle(title, referenceDate = new Date()) {
 
   // Infer year from referenceDate. Taiwan is UTC+8 with no DST, so a TW
   // wall-clock time of (month, day, hour, minute) is UTC (hour-8).
-  const refYear = referenceDate.getFullYear();
+  const refYear = new Date(referenceDate.getTime() + 8 * 60 * 60 * 1000).getUTCFullYear(); // Taipei year, independent of host TZ
   let date = new Date(Date.UTC(refYear, month - 1, day, hour - 8, minute));
 
   // If that lands more than ~2 months before "now", assume it rolled into
@@ -55,6 +55,12 @@ export function parseThreadTitle(title, referenceDate = new Date()) {
   const twoMonthsMs = 60 * 24 * 60 * 60 * 1000;
   if (date.getTime() < referenceDate.getTime() - twoMonthsMs) {
     date = new Date(Date.UTC(refYear + 1, month - 1, day, hour - 8, minute));
+  }
+  // Mirror case: reference is early January and the title is late December
+  // of the year before (e.g. a 12/30 team viewed on 1/2) — don't read it as
+  // 11+ months in the future.
+  if (date.getTime() > referenceDate.getTime() + 300 * 24 * 60 * 60 * 1000) {
+    date = new Date(Date.UTC(refYear - 1, month - 1, day, hour - 8, minute));
   }
 
   const statusText = statusRaw.trim();
