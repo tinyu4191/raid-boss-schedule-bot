@@ -1,12 +1,14 @@
 import * as listboss from './listboss.js';
 import * as syncboss from './syncboss.js';
 import * as weeklyreport from './weeklyreport.js';
+import * as givemereport from './givemereport.js';
 import { MessageFlags } from 'discord.js';
 
 const commands = new Map([
   [listboss.data.name, listboss],
   [syncboss.data.name, syncboss],
   [weeklyreport.data.name, weeklyreport],
+  [givemereport.data.name, givemereport],
 ]);
 
 export function registerCommandHandlers(client) {

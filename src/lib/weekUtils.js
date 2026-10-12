@@ -96,3 +96,30 @@ export function weekMidpoint(weekStartKey) {
   const [y, m, d] = weekStartKey.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d + 3, 12 - 8, 0));
 }
+
+/** The week_start key (Tuesday, Taipei) of the week containing the Taipei calendar date y-m-d. */
+export function weekKeyOfTaipeiDate(y, m, d) {
+  return getWeekStartKey(new Date(Date.UTC(y, m - 1, d, 12 - 8, 0))); // Taipei noon
+}
+
+/** Today's Taipei calendar date as { y, m, d }. */
+export function getTaipeiToday(now = new Date()) {
+  const tw = toTaipeiShifted(now);
+  return { y: tw.getUTCFullYear(), m: tw.getUTCMonth() + 1, d: tw.getUTCDate() };
+}
+
+/** Every week_start key from startKey to endKey, inclusive. */
+export function listWeekKeys(startKey, endKey) {
+  const keys = [];
+  for (let k = startKey; k <= endKey; k = shiftWeekKey(k, 1)) keys.push(k); // YYYY-MM-DD sorts lexicographically
+  return keys;
+}
+
+/** "2026/09/29 (二) ～ 2026/10/26 (一)" — a multi-week range, with years. */
+export function getRangeLabel(startKey, endKey) {
+  const [sy, sm, sd] = startKey.split('-').map(Number);
+  const [ey, em, ed] = endKey.split('-').map(Number);
+  const end = new Date(Date.UTC(ey, em - 1, ed + 6));
+  const fmt = (y, m, d) => `${y}/${pad2(m)}/${pad2(d)}`;
+  return `${fmt(sy, sm, sd)} (二) ～ ${fmt(end.getUTCFullYear(), end.getUTCMonth() + 1, end.getUTCDate())} (一)`;
+}

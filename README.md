@@ -481,7 +481,11 @@ into one report. Each (channel, week) is sent once (`weekly_reports_sent`);
 if the bot was down at 08:00 it catches up later the same Tuesday.
 Threads deleted before the report runs can't be counted.
 
-`/weeklyreport [weeks_ago] [post]` (Manage Server) previews the report
+Pause the *scheduled* send without touching any channel IDs by setting
+the global switch `WEEKLY_REPORT_AUTO=false` in `.env` (remove it or set
+`true` to resume). Manual posting keeps working while paused.
+
+`/weeklyreport [weeks_ago] [post]` (Manage Server) previews one week's report
 privately, works before a channel is configured, and with `post:true`
 sends it to the configured channel (a manual send does not suppress the
 scheduled one). The bot needs Send Messages + Embed Links in the report
@@ -497,7 +501,13 @@ channel. Run `npm run deploy-commands` once to register the command.
   you ever suspect a missed event, without waiting for the next thread
   change.
 - `/weeklyreport [weeks_ago] [post]` (requires Manage Server) — previews
-  or manually sends the weekly report (see above).
+  or manually sends one week's report (see above).
+- `/givemereport start end [post]` (requires Manage Server) — same report
+  over a range of weeks. `start` / `end` are dates (`2026-09-29` or `9/29`);
+  each selects the week (Tue–Mon) that contains it, and the end week is
+  included. Max 53 weeks. A range report adds a per-week count; if the range
+  includes the unfinished current week the footer says so. Preview by
+  default, `post:true` sends to the configured report channel.
 
 ## Operational scripts
 
