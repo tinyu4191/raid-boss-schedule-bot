@@ -1,6 +1,6 @@
 import { ChannelType, EmbedBuilder } from 'discord.js';
 import { parseThreadTitle } from './titleParser.js';
-import { parseStarterMessage } from './starterMessageParser.js';
+import { parseStarterMessage, formatChannelEmoji } from './starterMessageParser.js';
 import { resolveBossTag } from './forumTags.js';
 import { applyTitleTemplate } from './titleTemplate.js';
 import { hasReminderBeenSent, markReminderSent } from '../db/db.js';
@@ -63,7 +63,7 @@ async function sendReminder({ client, thread, parsed, displayBoss, color, remind
   const { memberIds, channelNumber } = parseStarterMessage(starterMessage, thread.ownerId);
 
   const teamLabel = parsed.teamName || `${displayBoss.name}突襲團`;
-  const channelText = channelNumber ? `CH${channelNumber}` : '⚠️ 待隊長另行公布';
+  const channelText = channelNumber ? formatChannelEmoji(channelNumber) : '⚠️ 待隊長另行公布';
   const threadLink = `https://discord.com/channels/${guildId}/${thread.id}`;
   const mentionLine = memberIds.map((id) => `<@${id}>`).join(' ');
 

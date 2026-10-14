@@ -10,6 +10,18 @@
 const CHANNEL_RE = /(?:頻道|ch)\s*[:：]?\s*(\d+)/i;
 
 /**
+ * Renders a channel number as emoji for display in the reminder:
+ * "123" -> "🇨🇭1️⃣2️⃣3️⃣". Each digit becomes its keycap emoji
+ * (digit + U+FE0F + U+20E3). parseStarterMessage still returns the plain
+ * digits; this is purely presentation.
+ * @param {string} channelNumber - digits only, e.g. "88"
+ */
+export function formatChannelEmoji(channelNumber) {
+  const keycaps = [...String(channelNumber)].map((d) => `${d}\uFE0F\u20E3`).join('');
+  return `🇨🇭${keycaps}`;
+}
+
+/**
  * @param {import('discord.js').Message | null} starterMessage
  * @param {string} captainId - thread.ownerId, always included in the roster
  * @returns {{
