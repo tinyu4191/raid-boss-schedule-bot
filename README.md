@@ -410,7 +410,7 @@ title:
   case-insensitive, directly followed by a number). If the captain hasn't
   posted a channel number yet, the reminder shows "⚠️ 待隊長另行公布"
   instead of blocking. The number is displayed as emoji, e.g. `頻道：123`
-  becomes 🇨🇭1️⃣2️⃣3️⃣.
+  becomes the letters C, H (as separate letter emoji) followed by 1️⃣2️⃣3️⃣.
 
 This requires the bot to read message content, which needs the
 **Message Content** privileged intent — see

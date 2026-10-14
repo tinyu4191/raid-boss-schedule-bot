@@ -11,14 +11,17 @@ const CHANNEL_RE = /(?:頻道|ch)\s*[:：]?\s*(\d+)/i;
 
 /**
  * Renders a channel number as emoji for display in the reminder:
- * "123" -> "🇨🇭1️⃣2️⃣3️⃣". Each digit becomes its keycap emoji
+ * "123" -> "🇨 🇭1️⃣2️⃣3️⃣" (C and H as separate letter emoji). Each digit becomes its keycap emoji
  * (digit + U+FE0F + U+20E3). parseStarterMessage still returns the plain
  * digits; this is purely presentation.
  * @param {string} channelNumber - digits only, e.g. "88"
  */
 export function formatChannelEmoji(channelNumber) {
   const keycaps = [...String(channelNumber)].map((d) => `${d}\uFE0F\u20E3`).join('');
-  return `🇨🇭${keycaps}`;
+  // 🇨 (U+1F1E8) + 🇭 (U+1F1ED) side by side would merge into the Swiss
+  // flag, so a zero-width space between them keeps them as two separate
+  // letter emoji, matching the keycap digits.
+  return `\u{1F1E8}\u200B\u{1F1ED}${keycaps}`;
 }
 
 /**
