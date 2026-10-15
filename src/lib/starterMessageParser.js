@@ -17,11 +17,11 @@ const CHANNEL_RE = /(?:頻道|ch)\s*[:：]?\s*(\d+)/i;
  * @param {string} channelNumber - digits only, e.g. "88"
  */
 export function formatChannelEmoji(channelNumber) {
-  const keycaps = [...String(channelNumber)].map((d) => `${d}\uFE0F\u20E3`).join('');
+  const keycaps = [...String(channelNumber)].map((d) => `${d}\uFE0F\u20E3`).join(' ');
   // 🇨 (U+1F1E8) + 🇭 (U+1F1ED) side by side would merge into the Swiss
   // flag, so a zero-width space between them keeps them as two separate
   // letter emoji, matching the keycap digits.
-  return `\u{1F1E8}\u200B\u{1F1ED}${keycaps}`;
+  return `${keycaps}`;
 }
 
 /**
