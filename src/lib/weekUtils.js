@@ -55,6 +55,15 @@ export function isPast(date, now = new Date()) {
 }
 
 /**
+ * True once `endAfterMs` has elapsed since the raid's start time — a team is
+ * treated as finished that long after it began (the schedule strikes it
+ * through). With endAfterMs = 0 this is the same as isPast.
+ */
+export function isEnded(startDate, now = new Date(), endAfterMs = 0) {
+  return startDate.getTime() + endAfterMs <= now.getTime();
+}
+
+/**
  * Milliseconds from `now` until the next Asia/Taipei 00:00 boundary. Used
  * to schedule the daily full resync (see index.js) that catches entries
  * which crossed into "已結束" overnight with no thread activity to trigger
@@ -122,4 +131,16 @@ export function getRangeLabel(startKey, endKey) {
   const end = new Date(Date.UTC(ey, em - 1, ed + 6));
   const fmt = (y, m, d) => `${y}/${pad2(m)}/${pad2(d)}`;
   return `${fmt(sy, sm, sd)} (二) ～ ${fmt(end.getUTCFullYear(), end.getUTCMonth() + 1, end.getUTCDate())} (一)`;
+}
+
+/**
+ * Milliseconds from `now` to the next multiple of `intervalMs` counted from
+ * Asia/Taipei midnight (so a 2-hour interval fires at 00:00, 02:00, 04:00 ...
+ * Taipei time, regardless of when the bot started).
+ */
+export function msUntilNextTaipeiBoundary(intervalMs, now = new Date()) {
+  const tw = toTaipeiShifted(now);
+  const sinceMidnight = ((tw.getUTCHours() * 60 + tw.getUTCMinutes()) * 60 + tw.getUTCSeconds()) * 1000 + tw.getUTCMilliseconds();
+  const wait = intervalMs - (sinceMidnight % intervalMs);
+  return wait === 0 ? intervalMs : wait;
 }

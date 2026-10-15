@@ -1,5 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
-import { getWeekRangeLabel, formatTaipeiDateHeader, formatTaipeiTime, isPast } from './weekUtils.js';
+import { getWeekRangeLabel, formatTaipeiDateHeader, formatTaipeiTime, isEnded } from './weekUtils.js';
 import { applyTitleTemplate } from './titleTemplate.js';
 
 /**
@@ -20,6 +20,8 @@ import { applyTitleTemplate } from './titleTemplate.js';
  *   (see config/bosses.js BOSS_<n>_TAGS) — one signup forum serving several
  *   bosses, distinguished per-thread by Forum tag rather than by channel.
  * @param {Date}   args.now
+ * @param {number} [args.endAfterMs] - a team is struck through as "已結束" this many
+ *   milliseconds after its start time (default 0 = as soon as it starts).
  * @param {boolean} [args.isShared] - shared/tag-based mode: the title and
  *   "no signups" text drop the single-boss framing, and each line is
  *   prefixed with its own resolved boss label.
@@ -37,6 +39,7 @@ export function buildScheduleEmbed({
   entries,
   now = new Date(),
   isShared = false,
+  endAfterMs = 0,
 }) {
   const templateVars = { emoji, name: bossName };
 
@@ -86,7 +89,7 @@ export function buildScheduleEmbed({
       }
 
       const line = `${statusEmoji} ${formatTaipeiTime(e.date)} ｜${afterPipe} → <#${e.threadId}>`;
-      lines.push(isPast(e.date, now) ? `~~${line}~~ *(已結束)*` : line);
+      lines.push(isEnded(e.date, now, endAfterMs) ? `~~${line}~~ *(已結束)*` : line);
     }
     lines.push('');
   }

@@ -52,3 +52,25 @@ CREATE TABLE IF NOT EXISTS weekly_reports_sent (
   sent_at         TEXT NOT NULL,
   PRIMARY KEY (channel_id, report_week_key)
 );
+
+-- Which Discord message shows which week's schedule for which boss, keyed
+-- by the boss's SIGNUP FORUM CHANNEL ID — an immutable Discord ID. (The old
+-- weekly_summary_messages table above was keyed by boss *name*, so merely
+-- renaming BOSS_<n>_NAME in .env made the bot think it was a brand-new boss
+-- and re-post every week's schedule. That table is kept untouched as a
+-- backup/migration source and is no longer written to.)
+CREATE TABLE IF NOT EXISTS schedule_messages (
+  signup_channel_id TEXT NOT NULL,
+  week_start_date   TEXT NOT NULL, -- YYYY-MM-DD, the Tuesday of that week (Asia/Taipei)
+  guild_id          TEXT NOT NULL,
+  boss_name         TEXT NOT NULL, -- informational label only, never used for lookups
+  channel_id        TEXT NOT NULL, -- the schedule channel the message lives in
+  message_id        TEXT NOT NULL,
+  PRIMARY KEY (signup_channel_id, week_start_date)
+);
+
+-- Small key/value table for one-off bookkeeping (e.g. "migration done").
+CREATE TABLE IF NOT EXISTS meta (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);

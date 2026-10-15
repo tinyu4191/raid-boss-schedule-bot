@@ -6,7 +6,9 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "deploy-commands": "node src/deploy-commands.js"
+    "deploy-commands": "node src/deploy-commands.js",
+    "list-tracked": "node scripts/list-tracked.mjs",
+    "reset-schedule": "node scripts/reset-schedule.mjs"
   },
   "engines": {
     "node": ">=22"

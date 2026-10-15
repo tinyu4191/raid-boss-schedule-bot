@@ -7,8 +7,9 @@ import { scanAndNotifyDayBefore } from './lib/dayBeforeNotice.js';
 import { scanAndSendWeeklyReports } from './lib/weeklyReport.js';
 import { parseThreadTitle } from './lib/titleParser.js';
 import { normalizeThreadTitle } from './lib/titleNormalizer.js';
-import { msUntilNextTaipeiMidnight } from './lib/weekUtils.js';
-import { hasTitleFixNoticeBeenSent, markTitleFixNoticeSent } from './db/db.js';
+import { msUntilNextTaipeiMidnight, msUntilNextTaipeiBoundary } from './lib/weekUtils.js';
+import { getScheduleRefreshMs } from './config/settings.js';
+import { hasTitleFixNoticeBeenSent, markTitleFixNoticeSent, migrateLegacyScheduleRows } from './db/db.js';
 import { registerCommandHandlers } from './commands/index.js';
 
 const REMINDER_SCAN_INTERVAL_MS = 60 * 1000; // check every minute
@@ -96,9 +97,9 @@ async function runReminderScan() {
 // strikethrough until the next unrelated event happened to touch that
 // boss. This daily pass at Asia/Taipei midnight re-syncs every boss
 // regardless, so "已結束" stays accurate even on a quiet day.
-async function runFullResync(reason) {
+async function runFullResync(reason, options = {}) {
   for (const cfg of getBossConfigs()) {
-    await syncBossSchedule(client, cfg).catch((err) =>
+    await syncBossSchedule(client, cfg, options).catch((err) =>
       console.error(`[${reason}] ${cfg.boss_name} failed:`, err)
     );
   }
@@ -110,6 +111,23 @@ function scheduleMidnightResync() {
     await runFullResync('midnight resync');
     setInterval(() => runFullResync('midnight resync'), ONE_DAY_MS);
   }, delay);
+}
+
+// Periodic status refresh (default every 2 hours, SCHEDULE_REFRESH_MINUTES;
+// 0 = off), aligned to Taipei clock boundaries (00:00, 02:00, ...). It only
+// touches last week's and this week's messages, so a raid that just crossed
+// its end time gets struck through without anyone having to edit a thread.
+function scheduleStatusRefresh() {
+  const interval = getScheduleRefreshMs();
+  if (!interval) {
+    console.log('Status refresh disabled (SCHEDULE_REFRESH_MINUTES=0).');
+    return;
+  }
+  const run = () => runFullResync('status refresh', { recentOnly: true });
+  setTimeout(() => {
+    run();
+    setInterval(run, interval);
+  }, msUntilNextTaipeiBoundary(interval));
 }
 
 client.once('clientReady', async () => {
@@ -124,6 +142,13 @@ client.once('clientReady', async () => {
     }`
   );
 
+  // One-time move of the old name-keyed records to the signup-channel-ID
+  // key (safe to run every start; it does nothing once done).
+  const mig = migrateLegacyScheduleRows(bossConfigs);
+  if (!mig.alreadyDone) {
+    console.log(`Schedule records migrated to channel-ID tracking: ${mig.migrated} moved, ${mig.leftBehind} old record(s) not matching any current .env boss left untouched.`);
+  }
+
   // Catch up on anything that changed while the bot was offline.
   await runFullResync('startup sync');
 
@@ -131,6 +156,7 @@ client.once('clientReady', async () => {
   await runReminderScan();
   setInterval(runReminderScan, REMINDER_SCAN_INTERVAL_MS);
   scheduleMidnightResync();
+  scheduleStatusRefresh();
 });
 
 registerCommandHandlers(client);

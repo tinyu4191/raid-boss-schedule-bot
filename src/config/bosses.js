@@ -281,6 +281,20 @@ export function getBossConfigs() {
     });
   }
 
+  // Schedule messages are tracked per signup forum channel, so two entries
+  // sharing one signup channel would overwrite each other's records.
+  const seenSignup = new Map();
+  for (const c of configs) {
+    const other = seenSignup.get(c.signup_channel_id);
+    if (other) {
+      console.warn(
+        `⚠️  ${other} and ${c.boss_name} use the same BOSS_*_SIGNUP_CHANNEL_ID (${c.signup_channel_id}); their schedule messages will conflict. Use one entry with BOSS_<n>_TAGS for a shared forum.`
+      );
+    } else {
+      seenSignup.set(c.signup_channel_id, c.boss_name);
+    }
+  }
+
   if (configs.length === 0) {
     console.warn('⚠️  No BOSS_*_NAME entries found in .env — bot will run but has nothing to sync.');
   }

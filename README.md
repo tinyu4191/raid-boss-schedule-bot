@@ -292,8 +292,12 @@ substitute unless the pool itself has been given a meaningful
   [24-hour missing-people nudge](#24-hour-missing-people-nudge) — without
   it, that message still sends but the `@everyone` silently doesn't ping
   anyone).
-- Bot permissions in the schedule channel and reminder channel (if
-  different): Send Messages + Embed Links.
+- Bot permissions in the schedule channel: View Channel, Send Messages,
+  Embed Links, and **Read Message History** — the bot finds its own
+  previous schedule message by ID in order to edit it in place; without
+  Read Message History it can't, and (older versions) posted a fresh
+  schedule on every sync. Current versions log an error and skip instead.
+  The reminder channel (if different) needs Send Messages + Embed Links.
 - A channel's permissions can differ from the server's overall
   integration permissions if it has its own overwrites — when the bot
   works in most channels but not one specific one, check that channel's
@@ -448,15 +452,26 @@ specific thread. A few things worth knowing about how this is scoped:
   title, so it behaves identically whether its signup Forum serves one
   boss or several via `BOSS_<n>_TAGS`.
 
-## Daily midnight resync
+## Status refresh (every 2 hours) and midnight resync
 
-The schedule embed only gets re-edited when something actually happens in
-its signup forum (a thread created, edited, archived, or deleted). On a
-quiet day, an entry that crosses its raid time doesn't pick up its
-`~~已結束~~` strikethrough until the next unrelated thread event happens
-to touch that boss — which might not be until the next signup. To keep
-"已結束" accurate regardless, every boss gets a full resync once a day at
-Asia/Taipei 00:00, independent of any thread activity.
+The schedule embed only gets re-edited when something happens in its
+signup forum (thread created, edited, archived, deleted). So that an entry
+that crosses its raid time still gets `~~strikethrough~~ *(已結束)*` on a
+quiet day, the bot also refreshes:
+
+- **every 2 hours** on the Asia/Taipei clock (00:00, 02:00, …), touching
+  only last week's and this week's messages, and skipping any message whose
+  content is already correct;
+- **once a day at 00:00**, a full resync of every week.
+
+A raid counts as ended `RAID_END_AFTER_MINUTES` after its start time
+(default `120`). Because the refresh runs on a 2-hour grid, the strikethrough
+can appear up to 2 hours late; thread events refresh it immediately.
+
+```
+RAID_END_AFTER_MINUTES=120     # when a raid is struck through
+SCHEDULE_REFRESH_MINUTES=120   # refresh interval; 0 = off (min 5)
+```
 
 ## Weekly report (Tuesday 08:00 Taipei)
 
@@ -522,6 +537,18 @@ channel. Run `npm run deploy-commands` once to register the command.
   logs. Exits with a non-zero status if anything failed, so it's also
   usable in a script.
 
+`npm run list-tracked` prints every schedule message the bot is tracking
+and whether it still exists in Discord (read-only, safe to run any time).
+`npm run reset-schedule -- <BOSS number|name|forum channel ID> [--yes]`
+repairs one boss's schedule channel: without `--yes` it only previews; with
+`--yes` it deletes the bot's recorded schedule messages for that boss
+(including orphaned old-name records in the same channel), then re-posts all
+weeks oldest-first so the newest is at the bottom. Stop the bot first.
+
+Use `list-tracked` when schedules seem to be duplicating: a `❌` with a permission error
+means the bot can't read that channel's history; a `⚠️` shows a mismatch
+between the recorded channel/name and the current `.env`.
+
 ## Adding a new boss
 
 Append the next `BOSS_<n>_*` block to `.env`, save, restart the bot.
@@ -545,8 +572,13 @@ SQLite (`better-sqlite3`), file at `./data.sqlite` (gitignored). Boss
 definitions themselves live in `.env`, not the DB — these tables only
 track state that has to persist between restarts:
 
-- `weekly_summary_messages` — which Discord message ID represents which
-  (guild, boss, week), so re-syncs edit in place instead of re-posting.
+- `schedule_messages` — which Discord message ID represents which
+  (signup forum channel ID, week), so re-syncs edit in place instead of
+  re-posting. Keyed by the channel **ID**, so renaming `BOSS_<n>_NAME` is
+  safe. Don't give two bosses the same signup channel (the bot warns).
+- `weekly_summary_messages` — the old name-keyed table. Kept only as a
+  backup; on first start its rows are copied into `schedule_messages`.
+- `meta` — one-time flags such as "migration done".
 - `reminded_threads` — which threads have already had their 30-minute
   reminder sent, so the periodic scan never double-sends.
 - `title_fix_notices` — which threads have already gotten a "please fix
