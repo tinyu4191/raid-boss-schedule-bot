@@ -437,7 +437,10 @@ in):
 ```
 
 If no channel number was found in the starter message the last line reads
-`⚠️ 待隊長另行公布`. There are no @mentions, so it doesn't ping anyone —
+`⚠️ 待隊長另行公布`, followed by one extra line that @mentions the **captain
+only**, asking them to add `頻道：數字` to the post body (that line is
+removed again once a channel is set, see below). Otherwise there are no
+@mentions, so it doesn't ping anyone —
 people following the thread get Discord's normal thread notification. A
 failure in one place (say, no permission in the thread) never blocks the
 other. Needs **Send Messages in Posts** in the signup forum. Turn it off for

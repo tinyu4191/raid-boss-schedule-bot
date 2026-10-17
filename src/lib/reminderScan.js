@@ -116,8 +116,9 @@ async function sendReminder({
     if (threadReminderEnabled) {
       threadMsg = await thread
         .send({
-          content: buildThreadReminderText(parsed.date, channelNumber),
-          allowedMentions: { parse: [] }, // no pings in the thread copy
+          content: buildThreadReminderText(parsed.date, channelNumber, thread.ownerId),
+          // The only ping: the captain, and only when the channel is still unset.
+          allowedMentions: channelNumber || !thread.ownerId ? { parse: [] } : { users: [thread.ownerId] },
         })
         .catch((err) => {
           console.error(`[reminder] could not post in thread ${thread.id}:`, err?.message ?? err);
@@ -150,11 +151,18 @@ function formatChannelKeycaps(channelNumber) {
 }
 
 /**
- * The short, mention-free notice posted inside the signup thread itself.
+ * The short notice posted inside the signup thread itself. It never
+ * mentions the team; the one exception is a nudge to the captain (when
+ * captainId is given and no channel has been set yet) to fill in the channel
+ * — editing the starter post then updates this message for everyone.
  */
-export function buildThreadReminderText(date, channelNumber) {
+export function buildThreadReminderText(date, channelNumber, captainId = null) {
   const channelText = channelNumber ? formatChannelKeycaps(channelNumber) : '⚠️ 待隊長另行公布';
-  return `📣 ${REMINDER_LEAD_MINUTES} 分鐘後出團！\n🕒 時間：${formatReminderTime(date)}\n📡 頻道：${channelText}`;
+  let text = `📣 ${REMINDER_LEAD_MINUTES} 分鐘後出團！\n🕒 時間：${formatReminderTime(date)}\n📡 頻道：${channelText}`;
+  if (!channelNumber && captainId) {
+    text += `\n👉 <@${captainId}> 隊長請在貼文內文加上「頻道：數字」，這則通知會自動更新給所有隊員`;
+  }
+  return text;
 }
 
 export function formatReminderTime(date) {

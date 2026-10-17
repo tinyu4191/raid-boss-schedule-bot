@@ -61,7 +61,7 @@ async function doRefresh(client, thread, { starterMessage = null, force = false 
   if (row.thread_message_id && parsed) {
     const msg = await thread.messages.fetch(row.thread_message_id).catch((err) => noteFetchError('thread', thread, err));
     if (msg) {
-      const text = buildThreadReminderText(parsed.date, channelNumber);
+      const text = buildThreadReminderText(parsed.date, channelNumber, thread.ownerId);
       if (msg.content !== text) {
         await msg.edit({ content: text, allowedMentions: { parse: [] } }).catch((err) => logEditError('thread', thread, err));
         edited = true;
