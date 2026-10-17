@@ -29,13 +29,27 @@ const client = new Client({
   // Partials.Message: so edits to messages the bot hasn't cached (e.g. a
   // starter post from before the last restart) still raise messageUpdate.
   partials: [Partials.Channel, Partials.Message],
+  // Keep memory flat on the small VM: drop cached messages older than 30 min
+  // every 30 min (everything the bot needs is re-fetched on demand).
+  sweepers: {
+    messages: { interval: 1800, lifetime: 1800 },
+  },
 });
+
+// Safety net: Node 22 exits on an unhandled rejection, which pm2 turns into a
+// silent restart. Log it and keep running instead.
+process.on('unhandledRejection', (err) => console.error('[unhandledRejection]', err));
+client.on('error', (err) => console.error('[client error]', err));
 
 // Best-effort title auto-fix, run only at the moment of create/edit (not
 // during periodic scans) — see titleNormalizer.js for what it can and
 // can't fix. If it can't safely fix the title, the captain gets a single
 // @-mention notice per thread instead of being silently ignored.
 async function maybeFixThreadTitle(thread) {
+  // Discord rejects renames (error 50083) on archived threads, and sending a
+  // message into one would silently un-archive it. An archive event itself
+  // fires threadUpdate, so skip here instead of erroring on every old thread.
+  if (thread.archived) return;
   if (parseThreadTitle(thread.name)) return; // already valid, nothing to do
 
   const result = normalizeThreadTitle(thread.name);
@@ -60,9 +74,11 @@ async function handleThreadEvent(thread, { attemptTitleFix = false } = {}) {
   if (!bossConfig) return; // thread isn't in a configured signup channel
 
   if (attemptTitleFix) {
-    await maybeFixThreadTitle(thread).catch((err) =>
-      console.error(`[titleNormalizer] thread ${thread.id} failed:`, err)
-    );
+    await maybeFixThreadTitle(thread).catch((err) => {
+      // 50083 = thread archived between the event and the edit: harmless race.
+      if (err?.code === 50083) return;
+      console.error(`[titleNormalizer] thread ${thread.id} failed:`, err);
+    });
   }
 
   try {
