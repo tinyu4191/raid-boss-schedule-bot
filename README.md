@@ -423,6 +423,26 @@ Editing the starter message any time before the 30-minute mark is picked
 up correctly, since the bot re-reads it fresh at reminder time rather than
 caching an earlier version.
 
+### Also posted inside the signup thread
+
+Besides the reminder channel, the same 30-minute trigger posts a short,
+mention-free notice inside the team's own signup thread (people may not
+watch the announcement channel, but always read the thread they signed up
+in):
+
+```
+📣 30 分鐘後出團！
+🕒 時間：10/17(五) 20:00
+📡 頻道：1️⃣2️⃣3️⃣
+```
+
+If no channel number was found in the starter message the last line reads
+`⚠️ 待隊長另行公布`. There are no @mentions, so it doesn't ping anyone —
+people following the thread get Discord's normal thread notification. A
+failure in one place (say, no permission in the thread) never blocks the
+other. Needs **Send Messages in Posts** in the signup forum. Turn it off for
+a boss with `BOSS_<n>_THREAD_REMINDER=false` (default: on).
+
 ## 24-hour missing-people nudge
 
 Separate from the 30-minute reminder above, the same every-minute scan

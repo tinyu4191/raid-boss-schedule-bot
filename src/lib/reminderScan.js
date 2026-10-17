@@ -15,8 +15,17 @@ const REMINDER_LEAD_MINUTES = 30;
  * thread's reminder fire exactly once regardless of how often this runs.
  */
 export async function scanAndSendReminders(client, bossConfig) {
-  const { guild_id, boss_name, signup_channel_id, reminder_channel_id, emoji, color, boss_tags, reminder_title_template } =
-    bossConfig;
+  const {
+    guild_id,
+    boss_name,
+    signup_channel_id,
+    reminder_channel_id,
+    emoji,
+    color,
+    boss_tags,
+    reminder_title_template,
+    thread_reminder_enabled,
+  } = bossConfig;
   const isShared = Array.isArray(boss_tags);
 
   const forumChannel = await client.channels.fetch(signup_channel_id).catch(() => null);
@@ -52,13 +61,24 @@ export async function scanAndSendReminders(client, bossConfig) {
       reminderTitleTemplate: reminder_title_template,
       reminderChannel,
       guildId: guild_id,
+      threadReminderEnabled: thread_reminder_enabled !== false,
     }).catch((err) => console.error(`[reminder] ${boss_name} / ${thread.name} failed:`, err));
 
     markReminderSent(guild_id, boss_name, thread.id);
   }
 }
 
-async function sendReminder({ client, thread, parsed, displayBoss, color, reminderTitleTemplate, reminderChannel, guildId }) {
+async function sendReminder({
+  client,
+  thread,
+  parsed,
+  displayBoss,
+  color,
+  reminderTitleTemplate,
+  reminderChannel,
+  guildId,
+  threadReminderEnabled = true,
+}) {
   const starterMessage = await thread.fetchStarterMessage().catch(() => null);
   const { memberIds, channelNumber } = parseStarterMessage(starterMessage, thread.ownerId);
 
@@ -82,11 +102,37 @@ async function sendReminder({ client, thread, parsed, displayBoss, color, remind
     )
     .setColor(color || '#57F287');
 
-  await reminderChannel.send({
-    content,
-    embeds: [embed],
-    allowedMentions: { parse: ['users'] }, // never triggers @everyone/@here even if content ever contains it
-  });
+  try {
+    await reminderChannel.send({
+      content,
+      embeds: [embed],
+      allowedMentions: { parse: ['users'] }, // never triggers @everyone/@here even if content ever contains it
+    });
+  } finally {
+    // The in-thread copy is independent: a failure in either place must not
+    // stop the other (and neither is retried — the reminder fires once).
+    if (threadReminderEnabled) {
+      await thread
+        .send({
+          content: buildThreadReminderText(parsed.date, channelNumber),
+          allowedMentions: { parse: [] }, // no pings in the thread copy
+        })
+        .catch((err) => console.error(`[reminder] could not post in thread ${thread.id}:`, err?.message ?? err));
+    }
+  }
+}
+
+/** "123" -> "1️⃣2️⃣3️⃣" (no CH prefix: the label already says it's the channel). */
+function formatChannelKeycaps(channelNumber) {
+  return [...String(channelNumber)].map((d) => `${d}\uFE0F\u20E3`).join('');
+}
+
+/**
+ * The short, mention-free notice posted inside the signup thread itself.
+ */
+export function buildThreadReminderText(date, channelNumber) {
+  const channelText = channelNumber ? formatChannelKeycaps(channelNumber) : '⚠️ 待隊長另行公布';
+  return `📣 ${REMINDER_LEAD_MINUTES} 分鐘後出團！\n🕒 時間：${formatReminderTime(date)}\n📡 頻道：${channelText}`;
 }
 
 function formatReminderTime(date) {

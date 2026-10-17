@@ -24,4 +24,4 @@ build/
 
 # tar檔
 *.tar.gz
-*.tar
+*.tar*.patch

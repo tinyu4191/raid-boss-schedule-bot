@@ -116,6 +116,14 @@ import 'dotenv/config';
  * Everything else about that boss (schedule, 30-minute reminder, etc.)
  * keeps working as usual — this only silences the 24-hour nudge.
  *
+ * THREAD REMINDER: besides the reminder channel, the 30-minute reminder is
+ * also posted inside the team's own signup thread (time + channel, no
+ * @mentions), since not everyone watches the announcement channel but
+ * everyone reads the thread they signed up in. On by default; turn it off
+ * per boss with false/off/0/no:
+ *
+ *   BOSS_1_THREAD_REMINDER=false
+ *
  * WEEKLY REPORT: every Tuesday 08:00 (Taipei) the bot can post last
  * week's raid statistics (see weeklyReport.js). Opt-in per boss by giving
  * it a destination channel; there is deliberately NO default channel.
@@ -255,6 +263,7 @@ export function getBossConfigs() {
     const missingEmoji = process.env[`BOSS_${i}_MISSING_EMOJI`] || style?.missingEmoji || '🈸';
     const reminderChannelId = process.env[`BOSS_${i}_REMINDER_CHANNEL_ID`] || scheduleChannelId;
     const dayBeforeNoticeEnabled = parseEnabledFlag(process.env[`BOSS_${i}_DAY_BEFORE_NOTICE`], true);
+    const threadReminderEnabled = parseEnabledFlag(process.env[`BOSS_${i}_THREAD_REMINDER`], true);
     const reportChannelId = process.env[`BOSS_${i}_REPORT_CHANNEL_ID`] || null; // no default: unset = no report
     const weeklyReportEnabled = parseEnabledFlag(process.env[`BOSS_${i}_WEEKLY_REPORT`], true);
     const scheduleTitleTemplate = process.env[`BOSS_${i}_SCHEDULE_TITLE`] || style?.scheduleTitleTemplate || null;
@@ -273,6 +282,7 @@ export function getBossConfigs() {
       missing_emoji: missingEmoji,
       boss_tags: bossTags,
       day_before_notice_enabled: dayBeforeNoticeEnabled,
+      thread_reminder_enabled: threadReminderEnabled,
       report_channel_id: reportChannelId,
       weekly_report_enabled: weeklyReportEnabled,
       schedule_title_template: scheduleTitleTemplate,
