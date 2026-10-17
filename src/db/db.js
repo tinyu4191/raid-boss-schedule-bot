@@ -199,3 +199,34 @@ export function markWeeklyReportSent(guildId, channelId, reportWeekKey) {
     ON CONFLICT(channel_id, report_week_key) DO NOTHING
   `).run(guildId, channelId, reportWeekKey, new Date().toISOString());
 }
+
+// ---------- reminder_messages (see schema.sql) ----------
+
+export function saveReminderMessages({ threadId, signupChannelId, channelNumber, reminderChannelId, reminderMessageId, threadMessageId }) {
+  db.prepare(`
+    INSERT OR REPLACE INTO reminder_messages
+      (thread_id, signup_channel_id, channel_number, reminder_channel_id, reminder_message_id, thread_message_id, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    threadId,
+    signupChannelId,
+    channelNumber ?? null,
+    reminderChannelId ?? null,
+    reminderMessageId ?? null,
+    threadMessageId ?? null,
+    new Date().toISOString()
+  );
+}
+
+export function getReminderMessages(threadId) {
+  return db.prepare(`SELECT * FROM reminder_messages WHERE thread_id = ?`).get(threadId);
+}
+
+export function updateReminderChannelNumber(threadId, channelNumber) {
+  db.prepare(`UPDATE reminder_messages SET channel_number = ? WHERE thread_id = ?`).run(channelNumber ?? null, threadId);
+}
+
+/** Reminders posted at or after `sinceIso` — the ones still worth re-checking. */
+export function listRecentReminderMessages(sinceIso) {
+  return db.prepare(`SELECT * FROM reminder_messages WHERE created_at >= ? ORDER BY created_at`).all(sinceIso);
+}

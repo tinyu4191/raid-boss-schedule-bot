@@ -74,3 +74,17 @@ CREATE TABLE IF NOT EXISTS meta (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+-- The reminder messages the bot posted for a thread (one in the reminder
+-- channel, one inside the thread), and the channel number they showed, so
+-- they can be edited in place when the captain later changes the channel
+-- in the starter post. Message IDs are NULL when that copy wasn't sent.
+CREATE TABLE IF NOT EXISTS reminder_messages (
+  thread_id           TEXT PRIMARY KEY,
+  signup_channel_id   TEXT NOT NULL,
+  channel_number      TEXT,            -- NULL = "not announced yet"
+  reminder_channel_id TEXT,
+  reminder_message_id TEXT,
+  thread_message_id   TEXT,
+  created_at          TEXT NOT NULL    -- ISO timestamp
+);

@@ -443,6 +443,24 @@ failure in one place (say, no permission in the thread) never blocks the
 other. Needs **Send Messages in Posts** in the signup forum. Turn it off for
 a boss with `BOSS_<n>_THREAD_REMINDER=false` (default: on).
 
+### Keeping posted reminders up to date
+
+The reminder usually goes out before the captain has picked an in-game
+channel (`⚠️ 待隊長另行公布`), and captains sometimes change channel later
+(e.g. the first choice turns out to be busy). When the channel number in the
+starter post changes, **both** reminder copies — in the reminder channel and
+inside the thread — are **edited in place** to the new channel. Edits don't
+notify anyone; that's intentional. If the thread is renamed to a new raid
+time, the time shown is corrected too.
+
+How: the bot reacts to edits of the starter post (`messageUpdate`, instant),
+and every minute re-checks reminders sent in the last 3 hours, so an edit
+made while the bot was restarting is still picked up. The roster @mentions
+in the reminder channel message are left as sent. Only reminders sent after
+this feature was deployed can be updated (their message IDs are stored in
+`reminder_messages`). A thread that has been archived can't be edited, so it
+is skipped.
+
 ## 24-hour missing-people nudge
 
 Separate from the 30-minute reminder above, the same every-minute scan
@@ -606,6 +624,9 @@ track state that has to persist between restarts:
   @-mentioned again on every subsequent edit.
 - `day_before_notices` — which threads have already gotten the 24-hour
   missing-people `@everyone` nudge, so it only ever fires once per thread.
+- `reminder_messages` — the IDs of the reminder messages posted for a thread
+  and the channel number they show, so they can be edited if the channel
+  changes.
 - `weekly_reports_sent` — which (report channel, week) pairs already got
   their weekly report, so each is sent exactly once.
 

@@ -3,7 +3,7 @@ import { parseThreadTitle } from './titleParser.js';
 import { parseStarterMessage, formatChannelEmoji } from './starterMessageParser.js';
 import { resolveBossTag } from './forumTags.js';
 import { applyTitleTemplate } from './titleTemplate.js';
-import { hasReminderBeenSent, markReminderSent } from '../db/db.js';
+import { hasReminderBeenSent, markReminderSent, saveReminderMessages } from '../db/db.js';
 
 const REMINDER_LEAD_MINUTES = 30;
 
@@ -83,7 +83,7 @@ async function sendReminder({
   const { memberIds, channelNumber } = parseStarterMessage(starterMessage, thread.ownerId);
 
   const teamLabel = parsed.teamName || `${displayBoss.name}突襲團`;
-  const channelText = channelNumber ? formatChannelEmoji(channelNumber) : '⚠️ 待隊長另行公布';
+  const channelText = buildReminderChannelText(channelNumber);
   const threadLink = `https://discord.com/channels/${guildId}/${thread.id}`;
   const mentionLine = memberIds.map((id) => `<@${id}>`).join(' ');
 
@@ -102,8 +102,10 @@ async function sendReminder({
     )
     .setColor(color || '#57F287');
 
+  let channelMsg = null;
+  let threadMsg = null;
   try {
-    await reminderChannel.send({
+    channelMsg = await reminderChannel.send({
       content,
       embeds: [embed],
       allowedMentions: { parse: ['users'] }, // never triggers @everyone/@here even if content ever contains it
@@ -112,14 +114,34 @@ async function sendReminder({
     // The in-thread copy is independent: a failure in either place must not
     // stop the other (and neither is retried — the reminder fires once).
     if (threadReminderEnabled) {
-      await thread
+      threadMsg = await thread
         .send({
           content: buildThreadReminderText(parsed.date, channelNumber),
           allowedMentions: { parse: [] }, // no pings in the thread copy
         })
-        .catch((err) => console.error(`[reminder] could not post in thread ${thread.id}:`, err?.message ?? err));
+        .catch((err) => {
+          console.error(`[reminder] could not post in thread ${thread.id}:`, err?.message ?? err);
+          return null;
+        });
+    }
+    // Remember what was posted so a later edit of the starter post (e.g. the
+    // captain settles on a channel) can update these messages in place.
+    if (channelMsg || threadMsg) {
+      saveReminderMessages({
+        threadId: thread.id,
+        signupChannelId: thread.parentId,
+        channelNumber,
+        reminderChannelId: channelMsg ? reminderChannel.id : null,
+        reminderMessageId: channelMsg?.id ?? null,
+        threadMessageId: threadMsg?.id ?? null,
+      });
     }
   }
+}
+
+/** Channel line shown in the reminder channel's embed. */
+export function buildReminderChannelText(channelNumber) {
+  return channelNumber ? formatChannelEmoji(channelNumber) : '⚠️ 待隊長另行公布';
 }
 
 /** "123" -> "1️⃣2️⃣3️⃣" (no CH prefix: the label already says it's the channel). */
@@ -135,7 +157,7 @@ export function buildThreadReminderText(date, channelNumber) {
   return `📣 ${REMINDER_LEAD_MINUTES} 分鐘後出團！\n🕒 時間：${formatReminderTime(date)}\n📡 頻道：${channelText}`;
 }
 
-function formatReminderTime(date) {
+export function formatReminderTime(date) {
   const twOffsetMs = 8 * 60 * 60 * 1000;
   const tw = new Date(date.getTime() + twOffsetMs);
   const weekdays = ['日', '一', '二', '三', '四', '五', '六'];

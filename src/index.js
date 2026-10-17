@@ -3,6 +3,7 @@ import { Client, GatewayIntentBits, Partials } from 'discord.js';
 import { getBossConfigs, getBossConfigBySignupChannel } from './config/bosses.js';
 import { syncBossSchedule } from './lib/scheduleSync.js';
 import { scanAndSendReminders } from './lib/reminderScan.js';
+import { refreshReminderForThread, catchUpReminderRefresh } from './lib/reminderRefresh.js';
 import { scanAndNotifyDayBefore } from './lib/dayBeforeNotice.js';
 import { scanAndSendWeeklyReports } from './lib/weeklyReport.js';
 import { parseThreadTitle } from './lib/titleParser.js';
@@ -25,7 +26,9 @@ const client = new Client({
     // in the Developer Portal — see README.
     GatewayIntentBits.MessageContent,
   ],
-  partials: [Partials.Channel],
+  // Partials.Message: so edits to messages the bot hasn't cached (e.g. a
+  // starter post from before the last restart) still raise messageUpdate.
+  partials: [Partials.Channel, Partials.Message],
 });
 
 // Best-effort title auto-fix, run only at the moment of create/edit (not
@@ -74,8 +77,30 @@ async function handleThreadEvent(thread, { attemptTitleFix = false } = {}) {
 // only makes sense on create/update (a deleted thread has no title left
 // to fix).
 client.on('threadCreate', (thread) => handleThreadEvent(thread, { attemptTitleFix: true }));
-client.on('threadUpdate', (_oldThread, newThread) => handleThreadEvent(newThread, { attemptTitleFix: true }));
+client.on('threadUpdate', (_oldThread, newThread) => {
+  handleThreadEvent(newThread, { attemptTitleFix: true });
+  // A renamed thread may have a new raid time: fix the already-posted reminders too.
+  if (newThread?.parentId && getBossConfigBySignupChannel(newThread.parentId)) {
+    refreshReminderForThread(client, newThread, { force: true }).catch((err) =>
+      console.error(`[reminderRefresh] thread ${newThread.id} failed:`, err)
+    );
+  }
+});
 client.on('threadDelete', (thread) => handleThreadEvent(thread));
+
+// The captain edits the signup post (e.g. settles on an in-game channel after
+// the reminder already went out): update the posted reminders in place. In a
+// forum thread the starter message has the same ID as the thread itself.
+client.on('messageUpdate', async (_oldMessage, message) => {
+  try {
+    const channel = message.channel;
+    if (!channel?.isThread?.() || message.id !== channel.id) return;
+    if (!getBossConfigBySignupChannel(channel.parentId)) return;
+    await refreshReminderForThread(client, channel, { starterMessage: message.partial ? null : message });
+  } catch (err) {
+    console.error('[reminderRefresh] messageUpdate failed:', err);
+  }
+});
 
 async function runReminderScan() {
   for (const cfg of getBossConfigs()) {
@@ -86,6 +111,8 @@ async function runReminderScan() {
       console.error(`[dayBeforeNotice] ${cfg.boss_name} failed:`, err)
     );
   }
+  // Safety net for edits missed while the bot was down/restarting.
+  await catchUpReminderRefresh(client).catch((err) => console.error('[reminderRefresh] catch-up failed:', err));
   await scanAndSendWeeklyReports(client, getBossConfigs()).catch((err) =>
     console.error('[weeklyReport] scan failed:', err)
   );
